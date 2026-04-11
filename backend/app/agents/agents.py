@@ -65,7 +65,7 @@ def build_research_scout(model: str) -> Agent:
         verbose=True,
         allow_delegation=False,
         max_iter=3,
-        max_execution_time=80,
+        max_execution_time=45,
         max_rpm=3,
     )
 
@@ -91,7 +91,7 @@ def build_web_searcher(model: str) -> Agent:
         verbose=True,
         allow_delegation=False,
         max_iter=12,
-        max_execution_time=120,
+        max_execution_time=75,
         max_rpm=3,
     )
 
@@ -137,7 +137,7 @@ def build_report_writer(model: str) -> Agent:
         allow_delegation=False,
         max_iter=3,
         max_execution_time=90,
-        max_rpm=5,
+        max_rpm=3,
     )
 
 

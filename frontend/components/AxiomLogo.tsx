@@ -1,21 +1,48 @@
-export default function AxiomLogo({ size = 22 }: { size?: number }) {
+interface Props {
+  size?: number;
+  showWordmark?: boolean;
+}
+
+export default function AxiomLogo({ size = 28, showWordmark = false }: Props) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 32 32"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-label="Axiom"
-    >
-      {/* Geometric abstract A — two angled strokes meeting at apex, crossbar */}
-      <rect width="32" height="32" rx="6" fill="#8B0000" />
-      {/* Left leg */}
-      <path d="M8 25L16 7" stroke="#F2F0EA" strokeWidth="2.2" strokeLinecap="round" />
-      {/* Right leg */}
-      <path d="M16 7L24 25" stroke="#F2F0EA" strokeWidth="2.2" strokeLinecap="round" />
-      {/* Crossbar */}
-      <path d="M11 19h10" stroke="#F2F0EA" strokeWidth="2.2" strokeLinecap="round" />
-    </svg>
+    <div style={{ display: "flex", alignItems: "center", gap: showWordmark ? "10px" : "0" }}>
+      {/* Mark: a precision compass-rose / signal-burst — 4 diamond facets
+          arranged in a tight radial pattern. Conveys synthesis, convergence,
+          intelligence radiating from a core. Crimson fill, no bounding box. */}
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 36 36"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden={showWordmark}
+        aria-label={showWordmark ? undefined : "Axiom"}
+      >
+        {/* Top facet */}
+        <path d="M18 2 L22 14 L18 18 L14 14 Z" fill="#8B0000" />
+        {/* Right facet */}
+        <path d="M34 18 L22 14 L18 18 L22 22 Z" fill="#6D0000" />
+        {/* Bottom facet */}
+        <path d="M18 34 L14 22 L18 18 L22 22 Z" fill="#8B0000" fillOpacity="0.75" />
+        {/* Left facet */}
+        <path d="M2 18 L14 22 L18 18 L14 14 Z" fill="#6D0000" fillOpacity="0.85" />
+        {/* Centre dot — convergence point */}
+        <circle cx="18" cy="18" r="2.5" fill="#F2F0EA" />
+      </svg>
+
+      {showWordmark && (
+        <span style={{
+          fontFamily: "'Syne', sans-serif",
+          fontWeight: 700,
+          fontSize: `${size * 0.75}px`,
+          color: "var(--carbon)",
+          letterSpacing: "-0.03em",
+          lineHeight: 1,
+          userSelect: "none",
+        }}>
+          axiom
+        </span>
+      )}
+    </div>
   );
 }
