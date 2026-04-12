@@ -194,11 +194,18 @@ body {
   cursor: pointer;
   transition: all 0.14s;
   white-space: nowrap;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 .bar-btn:hover {
   background: var(--surface);
   border-color: var(--border-med);
   color: var(--text-secondary);
+}
+.bar-btn:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-light);
 }
 
 .bar-submit {
@@ -214,10 +221,20 @@ body {
   justify-content: center;
   flex-shrink: 0;
   transition: background 0.14s, transform 0.1s;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 .bar-submit:hover   { background: var(--accent); }
 .bar-submit:active  { transform: scale(0.93); }
-.bar-submit:disabled { background: var(--border-med); cursor: not-allowed; }
+.bar-submit:disabled {
+  background: var(--border-med);
+  cursor: not-allowed;
+  transform: none;
+}
+.bar-submit:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent-light);
+}
 
 /* ── Chips ──────────────────────────────────────────────────────────────── */
 .chip {

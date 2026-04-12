@@ -26,7 +26,7 @@ You type a question. Three specialised AI agents get to work:
 2. **Web Searcher** — Dispatches each query to the live web via Serper, extracts evidence and source URLs
 3. **Report Writer** — Synthesises everything into a professional Markdown report with Executive Summary, Methodology, Synthesis, Future Outlook, and Citations
 
-The entire pipeline streams back to you in real time through a Claude-style conversational interface.
+The entire pipeline streams back to you in real time through a conversational interface, with a live agent terminal on the right and your session history on the left.
 
 ---
 
@@ -35,13 +35,14 @@ The entire pipeline streams back to you in real time through a Claude-style conv
 | Layer | Technology | Purpose |
 |---|---|---|
 | Frontend | Next.js 16 (App Router) | Conversational UI, SSE streaming |
-| Styling | Tailwind CSS v4 + Syne + DM Sans | Editorial design system |
+| Styling | Tailwind CSS v4 + Plus Jakarta Sans + Lora | Editorial design system |
 | Animations | Framer Motion | Page transitions, streaming effects |
 | Backend | FastAPI + Uvicorn | SSE endpoint, history API |
 | Agents | CrewAI 1.14 | Multi-agent orchestration |
-| LLM | Gemini 2.0 Flash | Reasoning and synthesis |
+| LLM | Gemini 2.0 Flash (primary) | Reasoning and synthesis |
+| LLM Fallbacks | Gemini 2.5 Flash-Lite → Gemini 2.0 Flash-Lite → Groq/Llama-3.1 | Quota resilience |
 | Search | Serper.dev | Live web search |
-| Database | MongoDB Atlas M0 | Session persistence, search cache |
+| Database | MongoDB Atlas M0 | Session persistence |
 
 **100% free-tier compatible.** No credit card required to run locally.
 
@@ -57,9 +58,10 @@ The entire pipeline streams back to you in real time through a Claude-style conv
                      ┌──────────────▼───────────────┐
                      │     Next.js  (App Router)     │
                      │  LandingView ─► ResearchCanvas│
+                     │  InvestigationSidebar (SSE)   │
                      │  AgentHub terminal  (SSE)     │
                      └──────────────┬───────────────┘
-                                    │  POST /api/research
+                                    │  POST /api/research  { goal, model }
                                     │  ← SSE stream
                      ┌──────────────▼───────────────┐
                      │         FastAPI               │
@@ -72,28 +74,26 @@ The entire pipeline streams back to you in real time through a Claude-style conv
              ▼                      ▼                        ▼
     ┌────────────────┐   ┌──────────────────┐   ┌─────────────────┐
     │ Research Scout │──▶│  Web Searcher    │──▶│  Report Writer  │
-    │ Gemini Flash   │   │  Gemini Flash    │   │  Gemini Flash   │
+    │ Gemini 2.0     │   │  Gemini 2.0      │   │  Gemini 2.0     │
     │ max_rpm=3      │   │  + SerperDevTool │   │  max_rpm=3      │
     └────────────────┘   └──────────────────┘   └─────────────────┘
                                     │                        │
                          ┌──────────▼───────┐   ┌───────────▼─────┐
                          │   Serper.dev     │   │  MongoDB Atlas   │
-                         │  (live web)      │   │  (sessions +     │
-                         └──────────────────┘   │   24h cache)     │
-                                                └─────────────────┘
+                         │  (live web)      │   │  (sessions)      │
+                         └──────────────────┘   └─────────────────┘
 ```
 
-### Rate-limit safety
+### Rate-limit & resilience strategy
 
-Three layers protect you on the free tier:
-
-| Layer | Timeout | Behaviour on breach |
+| Layer | Setting | Behaviour on breach |
 |---|---|---|
-| Per-LLM call | 50s | Raises; retried by orchestrator |
-| Per-agent | 45–90s | `max_execution_time` on each Agent |
-| Per-crew | 120s | `asyncio.wait_for`; returns partial result |
-| RPM guard | `max_rpm=3` | CrewAI throttles per-model calls |
-| Model fallback | — | `gemini-2.0-flash` → `gemini-2.5-flash-lite` → `gemini-2.0-flash-lite` |
+| Per-agent RPM | `max_rpm=3` on all agents | CrewAI throttles automatically |
+| Per-LLM call | `timeout=150s` | Raises; retried by orchestrator |
+| Inter-agent padding | `time.sleep(2)` before kickoff | Drains burst window between agents |
+| Per-crew | `asyncio.wait_for(timeout=240s)` | Returns partial result |
+| Model fallback | Flash → Flash-Lite → Flash-Lite-2 → Groq | Switches on quota exhaustion |
+| Partial safety net | Writer invoked with gathered data on timeout | User always sees content |
 
 ---
 
@@ -110,17 +110,13 @@ Three layers protect you on the free tier:
 ```bash
 cd axiom/backend
 
-# Create virtual environment
 python -m venv .venv && source .venv/bin/activate
 # Windows: .venv\Scripts\activate
 
-# Install dependencies
 pip install -r requirements.txt
 
-# Configure secrets
-cp .env.example .env   # then fill in your keys
+cp .env.example .env   # fill in your keys
 
-# Start
 python run.py
 # → http://localhost:8000
 # → Swagger docs: http://localhost:8000/docs
@@ -150,8 +146,14 @@ GEMINI_API_KEY=your_google_ai_studio_key
 SERPER_API_KEY=your_serper_dev_key
 MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/?appName=Axiom
 
-# Optional
+# Optional — fallback providers (strongly recommended in production)
+# GEMINI_API_KEY_2=   # fresh daily quota pool (different Google account)
+# GROQ_API_KEY=       # Groq Llama-3.1-70b — free tier, separate quota
+
+# CORS — comma-separated, localhost:3000 always added in development
 ALLOWED_ORIGINS=http://localhost:3000
+# ALLOWED_ORIGINS=https://axiom.vercel.app,http://localhost:3000
+
 LOG_LEVEL=INFO
 ```
 
@@ -165,24 +167,58 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 ## API Reference
 
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/api/research` | Start research — returns SSE stream |
-| `GET` | `/api/history` | List sessions, newest first |
-| `GET` | `/api/history/{id}` | Full session + report |
-| `GET` | `/api/health` | Health check + DB status |
-| `GET` | `/docs` | Swagger UI |
+| Method | Path | Body / Params | Description |
+|---|---|---|---|
+| `POST` | `/api/research` | `{ goal, model }` | Start research — returns SSE stream |
+| `GET` | `/api/history` | `?limit=20&skip=0` | List sessions, newest first |
+| `GET` | `/api/history/{id}` | — | Full session + report |
+| `GET` | `/api/health` | — | Health check + DB status |
+| `GET` | `/docs` | — | Swagger UI |
 
 ### SSE event types
 
+| Event | Payload | Description |
+|---|---|---|
+| `status` | `"initializing" \| "running" \| "completed" \| "partial" \| "failed"` | Pipeline lifecycle |
+| `log` | string | Granular terminal log line |
+| `query` | string | A sub-query dispatched by Scout |
+| `report_chunk` | string | One streamed line of Markdown |
+| `complete` | `{ session_id, duration, partial, model }` | Final metadata |
+| `error` | string | Actionable error string |
+
+### Model selector
+
+The `model` field in the POST body accepts:
+
+| Value | Maps to |
+|---|---|
+| `"flash"` | `gemini/gemini-2.0-flash` |
+| `"pro"` | `gemini/gemini-1.5-pro` (or equivalent paid model) |
+
+---
+
+## UI Layout
+
 ```
-status       →  "initializing" | "running" | "completed" | "partial" | "failed"
-log          →  Granular terminal log line (30+ per session)
-query        →  A sub-query dispatched by the Research Scout
-report_chunk →  One streamed line of the Markdown report
-complete     →  JSON: { session_id, duration, partial, model }
-error        →  Actionable error string
+┌──────────────────────────────────────────────────────────────┐
+│  ◈ Axiom  │  [session title truncated…]         ● Running   │  ← NavBar (52px)
+├───────────────┬──────────────────────────┬───────────────────┤
+│ + NEW RESEARCH│                          │ Agent Log  RUNNING│
+│ ─────────────│                          │ ┌─────────────────┐│
+│ SESSIONS      │   Research Canvas        │ │ axiom-runtime   ││
+│               │   (max-w-3xl, mx-auto)   │ │ 09:41:22 ...    ││
+│  ● Session 1  │   text-lg leading-relaxed│ │ 09:41:25 ...    ││
+│  ● Session 2  │                          │ └─────────────────┘│
+│               │   [Lora report prose]    │                   │
+│               │                          │ Search queries    │
+│               │                          │ 01 query text...  │
+└───────────────┴──────────────────────────┴───────────────────┘
 ```
+
+- **Logo click** on the research view toggles the Sessions sidebar open/closed (Framer Motion slide)
+- **Logo click** on the landing view resets to home
+- **Session click** in the sidebar does a `GET /api/history/{id}` and loads the full report into the canvas
+- **NEW RESEARCH** button at the top of the sidebar resets to the landing form
 
 ---
 
@@ -204,6 +240,66 @@ Minimum 800 words. Academic prose. No bullet lists in body text.
 
 ---
 
+## Project Structure
+
+```
+axiom/
+├── README.md
+├── CLAUDE.md                    ← coding standards & progress tracker
+│
+├── backend/
+│   ├── .env                     ← secrets (gitignored)
+│   ├── .env.example             ← template with all variables documented
+│   ├── requirements.txt         ← pinned deps
+│   ├── run.py                   ← dev server entry point
+│   ├── render.yaml              ← Render deploy config
+│   └── app/
+│       ├── main.py              ← FastAPI app, dynamic CORS, lifespan
+│       ├── core/
+│       │   ├── config.py        ← Pydantic settings + production detection
+│       │   ├── database.py      ← Motor async MongoDB
+│       │   ├── logging.py       ← structured logging (verbose dev / quiet prod)
+│       │   └── retry.py         ← rate-limit backoff + daily quota detection
+│       ├── models/schemas.py    ← all Pydantic models + SSE event types
+│       ├── agents/
+│       │   ├── agents.py        ← Scout, Searcher, Writer + full fallback chain
+│       │   └── crew.py          ← orchestrator, padded kickoff, partial safety net
+│       └── api/research.py      ← route handlers + MongoDB persistence
+│
+└── frontend/
+    ├── .env.local               ← NEXT_PUBLIC_API_URL
+    ├── vercel.json
+    ├── types/index.ts           ← TypeScript types (SessionStatus, SelectedModel…)
+    ├── hooks/useResearch.ts     ← SSE consumer + loadSession (GET history)
+    ├── components/
+    │   ├── AxiomLogo.tsx        ← three-bar descending mark
+    │   ├── NavBar.tsx           ← logo (toggles sidebar) + session title + status
+    │   ├── LandingView.tsx      ← hero + controlled model selector + search bar
+    │   ├── InvestigationSidebar.tsx  ← NEW RESEARCH button + session list
+    │   ├── ResearchCanvas.tsx   ← streaming Markdown, max-w-3xl, text-lg
+    │   ├── AgentHub.tsx         ← terminal log panel, aligned header height
+    │   └── TableOfContents.tsx  ← auto-generated from ## headings
+    └── app/
+        ├── layout.tsx           ← Plus Jakarta Sans + Lora + Geist Mono
+        ├── globals.css          ← full design system (CSS vars, prose, terminal)
+        └── page.tsx             ← root: selectedModel state, sidebar toggle, session load
+```
+
+### Removed / deprecated components
+
+The following files are safe to delete — their functionality has been absorbed into the components above:
+
+| File | Replaced by |
+|---|---|
+| `frontend/components/HistorySidebar.tsx` | `InvestigationSidebar.tsx` |
+| `frontend/components/ProgressPanel.tsx` | `AgentHub.tsx` |
+| `frontend/components/ReportViewer.tsx` | `ResearchCanvas.tsx` |
+| `frontend/components/ResearchForm.tsx` | `LandingView.tsx` |
+| `frontend/components/StatusBadge.tsx` | Inline in `NavBar.tsx` |
+| `frontend/components/ErrorPanel.tsx` | Inline in `ResearchCanvas.tsx` |
+
+---
+
 ## Deployment
 
 ### Backend → [Render](https://render.com) (free tier)
@@ -211,7 +307,7 @@ Minimum 800 words. Academic prose. No bullet lists in body text.
 1. Push to GitHub
 2. New Web Service → Root directory: `backend`
 3. Render detects `render.yaml` automatically
-4. Set env vars in Render dashboard
+4. Set env vars in Render dashboard (`GEMINI_API_KEY`, `SERPER_API_KEY`, `MONGODB_URI`)
 5. Set `ALLOWED_ORIGINS` to your Vercel URL
 
 ### Frontend → [Vercel](https://vercel.com) (free hobby)
@@ -220,7 +316,7 @@ Minimum 800 words. Academic prose. No bullet lists in body text.
 2. Set `NEXT_PUBLIC_API_URL` to your Render URL
 3. Deploy
 
-> **Note:** Render free tier sleeps after 15 min idle. First request takes ~20s to wake. Add a "warming up..." state in production or upgrade to a paid instance.
+> **Note:** Render free tier sleeps after 15 min idle. First request takes ~20s. The "Queued — Initialising Axiom agent pipeline…" state in the UI covers this gracefully.
 
 ---
 
@@ -228,58 +324,14 @@ Minimum 800 words. Academic prose. No bullet lists in body text.
 
 | Problem | Fix |
 |---|---|
+| `429 RESOURCE_EXHAUSTED` (per-minute) | Wait 60s; the engine auto-retries with backoff |
+| `429 RESOURCE_EXHAUSTED` (daily, limit: 0) | Quota resets midnight Pacific. Set `GEMINI_API_KEY_2` or `GROQ_API_KEY` for automatic failover |
 | `ImportError: Google Gen AI native provider` | `pip install google-genai` |
-| `429 RESOURCE_EXHAUSTED` (per-minute) | Wait 60s; the engine auto-retries |
-| `429 RESOURCE_EXHAUSTED` (daily, limit: 0) | Quota resets at midnight Pacific, or generate a new API key |
-| `404 NOT_FOUND` for a Gemini model | That model is deprecated. The fallback chain uses only verified-active models |
+| `404 NOT_FOUND` for a Gemini model | That model is deprecated — the fallback chain uses only verified-active models |
 | MongoDB connection timeout | Atlas → Network Access → Add `0.0.0.0/0` |
 | SSE stream cuts off on Nginx | `X-Accel-Buffering: no` header is already set |
-
----
-
-## Project Structure
-
-```
-axiom/
-├── README.md
-├── CLAUDE.md                  ← progress tracker & coding standards
-│
-├── backend/
-│   ├── .env                   ← secrets (gitignored)
-│   ├── requirements.txt       ← pinned deps
-│   ├── run.py                 ← dev server
-│   ├── render.yaml            ← Render deploy config
-│   └── app/
-│       ├── main.py            ← FastAPI app, CORS, lifespan
-│       ├── core/
-│       │   ├── config.py      ← Pydantic settings
-│       │   ├── database.py    ← Motor async MongoDB
-│       │   ├── logging.py     ← structured logging
-│       │   └── retry.py       ← rate-limit backoff + daily quota detection
-│       ├── models/schemas.py  ← all Pydantic models + SSE event types
-│       ├── agents/
-│       │   ├── agents.py      ← Scout, Searcher, Writer definitions
-│       │   └── crew.py        ← orchestrator, fallback chain, SSE streaming
-│       └── api/research.py    ← route handlers + MongoDB persistence
-│
-└── frontend/
-    ├── .env.local             ← NEXT_PUBLIC_API_URL
-    ├── vercel.json
-    ├── types/index.ts         ← TypeScript types
-    ├── hooks/useResearch.ts   ← SSE consumer hook
-    ├── components/
-    │   ├── AxiomLogo.tsx      ← faceted diamond mark
-    │   ├── NavBar.tsx         ← glass nav
-    │   ├── LandingView.tsx    ← hero + search pill + chips
-    │   ├── InvestigationSidebar.tsx
-    │   ├── ResearchCanvas.tsx ← streaming markdown + TOC
-    │   ├── AgentHub.tsx       ← terminal log panel
-    │   └── TableOfContents.tsx
-    └── app/
-        ├── layout.tsx         ← Syne + DM Sans + JetBrains Mono
-        ├── globals.css        ← design system
-        └── page.tsx           ← 3-column layout with FM transitions
-```
+| Sidebar not sliding in | Ensure Framer Motion is installed: `npm install framer-motion` |
+| `cfg is undefined` crash in AgentHub | Fixed — all `cfg` accesses now use optional chaining (`cfg?.color`) |
 
 ---
 
