@@ -12,21 +12,34 @@ const slug = (t: string) =>
 
 const md: Components = {
   h1: ({ children }) => (
-    <motion.h1 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.38 }}>
+    <motion.h1
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.38 }}
+    >
       {children}
     </motion.h1>
   ),
   h2: ({ children }) => {
     const id = slug(String(children));
     return (
-      <motion.h2 id={id} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+      <motion.h2
+        id={id}
+        initial={{ opacity: 0, y: 5 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
         {children}
       </motion.h2>
     );
   },
   h3: ({ children }) => <h3 id={slug(String(children))}>{children}</h3>,
   p: ({ children }) => (
-    <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }}>
+    <motion.p
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.25 }}
+    >
       {children}
     </motion.p>
   ),
@@ -49,25 +62,38 @@ export default function ResearchCanvas({ state }: { state: ResearchState }) {
 
   const download = () => {
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([report], { type: "text/markdown" }));
+    a.href  = URL.createObjectURL(new Blob([report], { type: "text/markdown" }));
     a.download = `axiom-${sessionId?.slice(0, 8) ?? "report"}.md`;
     a.click();
   };
 
   return (
     <div className="canvas-scroll">
-      <div className="canvas-inner">
+      {/*
+        max-w-3xl ≈ 768px — strict column width for whitepaper readability.
+        The prose override below sets text-lg (1.125rem) + leading-relaxed (1.75).
+      */}
+      <div style={{
+        maxWidth: "48rem",   /* 768px = Tailwind max-w-3xl */
+        margin: "0 auto",
+        padding: "0 2.5rem",
+      }}>
 
-        {/* Queued */}
+        {/* ── Queued state ─────────────────────────────────────────── */}
         <AnimatePresence>
           {status === "queued" && (
             <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               style={{ textAlign: "center", paddingTop: "5rem" }}
             >
               <div style={{
-                width: 24, height: 24, borderRadius: "50%",
-                border: "2px solid var(--accent)", borderTopColor: "transparent",
+                width: 24,
+                height: 24,
+                borderRadius: "50%",
+                border: "2px solid var(--accent)",
+                borderTopColor: "transparent",
                 margin: "0 auto 1rem",
                 animation: "spin 0.75s linear infinite",
               }} />
@@ -76,16 +102,17 @@ export default function ResearchCanvas({ state }: { state: ResearchState }) {
                 fontSize: "0.8125rem",
                 color: "var(--text-muted)",
               }}>
-                Initialising agent pipeline...
+                Initialising Axiom agent pipeline...
               </p>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Auto h1 if report doesn't open with one */}
+        {/* ── Auto h1 if report doesn't open with one ──────────────── */}
         {(isStreaming || isDone) && !report.trimStart().startsWith("#") && goal && (
           <motion.h1
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
             style={{
               fontFamily: "var(--font-ui)",
               fontSize: "1.625rem",
@@ -102,10 +129,12 @@ export default function ResearchCanvas({ state }: { state: ResearchState }) {
           </motion.h1>
         )}
 
-        {/* Toolbar */}
+        {/* ── Toolbar ──────────────────────────────────────────────── */}
         {report.length > 0 && (
           <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
             marginBottom: "1.75rem",
             paddingBottom: "1rem",
             borderBottom: "1px solid var(--border)",
@@ -124,8 +153,16 @@ export default function ResearchCanvas({ state }: { state: ResearchState }) {
               }}>
                 {isStreaming ? "Streaming" : partial ? "Partial" : "Complete"}
               </span>
-              {isDone && model    && <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-faint)" }}>{model}</span>}
-              {isDone && duration && <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-faint)" }}>{duration}s</span>}
+              {isDone && model    && (
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-faint)" }}>
+                  {model}
+                </span>
+              )}
+              {isDone && duration && (
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-faint)" }}>
+                  {duration}s
+                </span>
+              )}
             </div>
             {isDone && (
               <button
@@ -159,33 +196,48 @@ export default function ResearchCanvas({ state }: { state: ResearchState }) {
           </div>
         )}
 
-        {/* TOC */}
+        {/* ── Table of contents ────────────────────────────────────── */}
         {hasToc && (
-          <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
             <TableOfContents markdown={report} />
           </motion.div>
         )}
 
-        {/* Report — Lora */}
+        {/* ── Report body — Lora + whitepaper sizing ───────────────── */}
         {report.length > 0 && (
-          <div className="report-prose">
+          <div
+            className="report-prose"
+            style={{
+              fontSize: "1.125rem",          /* text-lg */
+              lineHeight: 1.75,              /* leading-relaxed */
+            }}
+          >
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={md}>
               {report}
             </ReactMarkdown>
             {isStreaming && (
               <span style={{
-                display: "inline-block", width: 2, height: "1.1em",
-                background: "var(--accent)", marginLeft: 2, verticalAlign: "middle",
+                display: "inline-block",
+                width: 2,
+                height: "1.1em",
+                background: "var(--accent)",
+                marginLeft: 2,
+                verticalAlign: "middle",
                 animation: "blink 1s linear infinite",
               }} />
             )}
           </div>
         )}
 
-        {/* Error */}
+        {/* ── Error state ──────────────────────────────────────────── */}
         {status === "failed" && error && (
           <motion.div
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
             style={{
               borderRadius: "var(--radius-lg)",
               border: "1px solid var(--accent-mid)",
@@ -204,13 +256,29 @@ export default function ResearchCanvas({ state }: { state: ResearchState }) {
             }}>
               Pipeline error
             </p>
-            <p style={{ fontFamily: "var(--font-ui)", fontSize: "0.875rem", color: "var(--text-secondary)", lineHeight: 1.65 }}>
+            <p style={{
+              fontFamily: "var(--font-ui)",
+              fontSize: "0.875rem",
+              color: "var(--text-secondary)",
+              lineHeight: 1.65,
+            }}>
               {error}
             </p>
             {error.toLowerCase().includes("quota") && (
-              <p style={{ fontFamily: "var(--font-ui)", fontSize: "0.8125rem", color: "var(--text-muted)", marginTop: "0.75rem", lineHeight: 1.6 }}>
+              <p style={{
+                fontFamily: "var(--font-ui)",
+                fontSize: "0.8125rem",
+                color: "var(--text-muted)",
+                marginTop: "0.75rem",
+                lineHeight: 1.6,
+              }}>
                 Free quota resets at midnight Pacific.{" "}
-                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: "var(--accent)" }}
+                >
                   Generate a new API key
                 </a>{" "}
                 to continue immediately.

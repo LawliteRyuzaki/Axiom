@@ -12,33 +12,60 @@ import type { SelectedModel, AppView } from "@/types";
 const EASING = [0.22, 1, 0.36, 1] as const;
 
 export default function AxiomApp() {
-  const { state, startResearch, reset } = useResearch();
-  const [view, setView]           = useState<AppView>("landing");
-  const [historyKey, setHistoryKey] = useState(0);
+  const { state, startResearch, loadSession, reset } = useResearch();
+
+  const [view,          setView]          = useState<AppView>("landing");
+  const [historyKey,    setHistoryKey]    = useState(0);
+  const [selectedModel, setSelectedModel] = useState<SelectedModel>("flash");
+  const [sidebarOpen,   setSidebarOpen]   = useState(true);
 
   const isRunning = state.status === "running" || state.status === "queued";
 
-  const handleSubmit = useCallback((goal: string, _model: SelectedModel) => {
+  // ── Start new research ─────────────────────────────────────────────────────
+  const handleSubmit = useCallback((goal: string, model: SelectedModel) => {
     setView("research");
-    startResearch(goal);
+    setSidebarOpen(true);
+    startResearch(goal, model);
   }, [startResearch]);
 
+  // ── Reset to landing ───────────────────────────────────────────────────────
   const handleNewSession = useCallback(() => {
     reset();
     setView("landing");
     setHistoryKey(k => k + 1);
   }, [reset]);
 
+  // ── Logo click: toggle sidebar on research view; go home on landing ────────
+  const handleLogoClick = useCallback(() => {
+    if (view === "research") {
+      setSidebarOpen(v => !v);
+    } else {
+      handleNewSession();
+    }
+  }, [view, handleNewSession]);
+
+  // ── Load a past session ────────────────────────────────────────────────────
+  const handleSelectSession = useCallback((id: string) => {
+    setView("research");
+    loadSession(id);
+  }, [loadSession]);
+
+  // Derive a short session title for the nav
+  const sessionTitle = state.goal
+    ? (state.goal.length > 72 ? state.goal.slice(0, 72) + "…" : state.goal)
+    : undefined;
+
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      {/* Glass nav */}
+      {/* ── Glass nav ──────────────────────────────────────────────────── */}
       <NavBar
         status={state.status}
-        onNewSession={handleNewSession}
+        onLogoClick={handleLogoClick}
+        sessionTitle={sessionTitle}
         showNav={view === "research"}
       />
 
-      {/* ── LANDING ──────────────────────────────────────────────────── */}
+      {/* ── LANDING ────────────────────────────────────────────────────── */}
       <AnimatePresence mode="wait">
         {view === "landing" && (
           <motion.div
@@ -48,11 +75,15 @@ export default function AxiomApp() {
             transition={{ duration: 0.3, ease: "easeIn" }}
             style={{ flex: 1, overflow: "hidden" }}
           >
-            <LandingView onSubmit={handleSubmit} />
+            <LandingView
+              onSubmit={handleSubmit}
+              selectedModel={selectedModel}
+              onModelChange={setSelectedModel}
+            />
           </motion.div>
         )}
 
-        {/* ── RESEARCH 3-COLUMN ─────────────────────────────────────── */}
+        {/* ── RESEARCH 3-COLUMN ──────────────────────────────────────── */}
         {view === "research" && (
           <motion.div
             key="research"
@@ -61,38 +92,40 @@ export default function AxiomApp() {
             transition={{ duration: 0.35, ease: "easeOut" }}
             className="app-wrap"
           >
-            {/* Left sidebar slides in from left */}
-            <motion.div
-              initial={{ x: -240, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.45, ease: EASING, delay: 0.1 }}
-              style={{ display: "flex", flexShrink: 0 }}
-            >
-              <InvestigationSidebar
-                refreshKey={historyKey}
-                onSelect={id =>
-                  window.open(
-                    `${process.env.NEXT_PUBLIC_API_URL}/api/history/${id}`,
-                    "_blank"
-                  )
-                }
-              />
-            </motion.div>
+            {/* Left sidebar — slides in from left, toggled by logo */}
+            <AnimatePresence initial={false}>
+              {sidebarOpen && (
+                <motion.div
+                  key="sidebar"
+                  initial={{ x: -240, opacity: 0 }}
+                  animate={{ x: 0,    opacity: 1 }}
+                  exit={{ x: -240,    opacity: 0 }}
+                  transition={{ duration: 0.38, ease: EASING }}
+                  style={{ display: "flex", flexShrink: 0 }}
+                >
+                  <InvestigationSidebar
+                    refreshKey={historyKey}
+                    onNewSession={handleNewSession}
+                    onSelect={handleSelectSession}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            {/* Center canvas expands in */}
+            {/* Center canvas */}
             <motion.div
               initial={{ opacity: 0, scale: 0.99 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, ease: EASING, delay: 0.15 }}
+              transition={{ duration: 0.4, ease: EASING, delay: 0.12 }}
               className="canvas-panel"
             >
               <ResearchCanvas state={state} />
             </motion.div>
 
-            {/* Right hub slides in from right */}
+            {/* Right agent hub — slides in from right */}
             <motion.div
               initial={{ x: 300, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
+              animate={{ x: 0,   opacity: 1 }}
               transition={{ duration: 0.45, ease: EASING, delay: 0.1 }}
               style={{ display: "flex", flexShrink: 0 }}
             >

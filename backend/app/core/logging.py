@@ -5,7 +5,8 @@ from app.core.config import get_settings
 
 def setup_logging() -> logging.Logger:
     settings = get_settings()
-    level = getattr(logging, settings.log_level.upper(), logging.INFO)
+    # Use effective_log_level: verbose locally, concise in production
+    level = getattr(logging, settings.effective_log_level, logging.INFO)
 
     logging.basicConfig(
         level=level,

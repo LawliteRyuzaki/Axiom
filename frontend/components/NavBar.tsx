@@ -11,9 +11,14 @@ const S: Record<SessionStatus, { dot: string; label: string }> = {
   failed:    { dot: "var(--term-red)",    label: "Error"    },
 };
 
-interface Props { status: SessionStatus; onNewSession: () => void; showNav: boolean; }
+interface Props {
+  status: SessionStatus;
+  onLogoClick: () => void;
+  sessionTitle?: string;
+  showNav: boolean;
+}
 
-export default function NavBar({ status, onNewSession, showNav }: Props) {
+export default function NavBar({ status, onLogoClick, sessionTitle, showNav }: Props) {
   const s = S[status] ?? S.idle;
 
   return (
@@ -24,21 +29,29 @@ export default function NavBar({ status, onNewSession, showNav }: Props) {
         display: "flex",
         alignItems: "center",
         padding: "0 18px",
-        gap: 10,
         position: "sticky",
         top: 0,
         zIndex: 50,
       }}
     >
-      {/* Brand */}
+      {/* Logo — clickable, toggles history drawer */}
       <button
-        onClick={onNewSession}
+        onClick={onLogoClick}
         style={{
-          display: "flex", alignItems: "center", gap: 9,
-          background: "none", border: "none", cursor: "pointer", padding: 0,
+          display: "flex",
+          alignItems: "center",
+          gap: 9,
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: "4px 6px",
+          borderRadius: "var(--radius)",
           flexShrink: 0,
+          transition: "opacity 0.14s",
         }}
-        aria-label="Axiom home"
+        onMouseEnter={e => (e.currentTarget.style.opacity = "0.7")}
+        onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+        aria-label="Toggle sessions panel"
       >
         <AxiomLogo size={22} />
         <span style={{
@@ -53,66 +66,69 @@ export default function NavBar({ status, onNewSession, showNav }: Props) {
         </span>
       </button>
 
-      <div style={{ flex: 1 }} />
-
+      {/* Vertical separator */}
       {showNav && (
-        <>
-          {/* Status */}
-          <div style={{
-            display: "flex", alignItems: "center", gap: 6,
-            padding: "4px 10px",
-            borderRadius: 99,
-            background: "var(--bg)",
-            border: "1px solid var(--border)",
-          }}>
-            <span style={{
-              width: 6, height: 6, borderRadius: "50%",
-              background: s.dot, flexShrink: 0,
-              animation: (status === "running" || status === "queued")
-                ? "soft-pulse 1.4s ease infinite" : "none",
-            }} />
-            <span style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: "0.625rem",
-              fontWeight: 400,
-              color: "var(--text-muted)",
-              textTransform: "uppercase",
-              letterSpacing: "0.09em",
-            }}>
-              {s.label}
-            </span>
-          </div>
+        <div style={{
+          width: 1,
+          height: 20,
+          background: "var(--border)",
+          margin: "0 14px",
+          flexShrink: 0,
+        }} />
+      )}
 
-          <button
-            onClick={onNewSession}
-            style={{
-              fontFamily: "var(--font-ui)",
-              fontSize: "0.8125rem",
-              fontWeight: 500,
-              color: "var(--text-muted)",
-              background: "transparent",
-              border: "1px solid var(--border)",
-              borderRadius: "var(--radius)",
-              padding: "5px 13px",
-              cursor: "pointer",
-              transition: "all 0.14s",
-            }}
-            onMouseEnter={e => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.color = "var(--text-primary)";
-              el.style.borderColor = "var(--border-med)";
-              el.style.background = "var(--surface)";
-            }}
-            onMouseLeave={e => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.color = "var(--text-muted)";
-              el.style.borderColor = "var(--border)";
-              el.style.background = "transparent";
-            }}
-          >
-            New session
-          </button>
-        </>
+      {/* Session title — centered */}
+      {showNav && sessionTitle && (
+        <span style={{
+          flex: 1,
+          fontFamily: "var(--font-ui)",
+          fontSize: "0.8125rem",
+          fontWeight: 400,
+          color: "var(--text-muted)",
+          letterSpacing: "-0.005em",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          maxWidth: 520,
+        }}>
+          {sessionTitle}
+        </span>
+      )}
+
+      {!showNav && <div style={{ flex: 1 }} />}
+
+      {/* Status pill — only while research is active */}
+      {showNav && (
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "4px 10px",
+          borderRadius: 99,
+          background: "var(--bg)",
+          border: "1px solid var(--border)",
+          flexShrink: 0,
+        }}>
+          <span style={{
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            background: s.dot,
+            flexShrink: 0,
+            animation: (status === "running" || status === "queued")
+              ? "soft-pulse 1.4s ease infinite" : "none",
+          }} />
+          <span style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: "0.625rem",
+            fontWeight: 400,
+            color: "var(--text-muted)",
+            textTransform: "uppercase",
+            letterSpacing: "0.09em",
+          }}>
+            {s.label}
+          </span>
+        </div>
       )}
     </nav>
   );

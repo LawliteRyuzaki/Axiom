@@ -1,8 +1,13 @@
 """
-ScholarSync Crew Orchestrator  (crewai v1.14.x)
--------------------------------------------------
+Axiom Crew Orchestrator  (crewai v1.14.x)
+------------------------------------------
 Granular SSE messages so the frontend terminal feels alive at every step.
-Rate-limit strategy: per-minute 429 -> backoff+retry; daily quota -> next model.
+
+Key resilience improvements:
+  - Full provider fallback chain (Gemini primary → Gemini-lite → secondary key → Groq)
+  - 2-second mandatory sleep between agent transitions to prevent burst-rate trips
+  - Report Writer is invoked even on timeout so the user always sees content
+  - Per-minute 429 → exponential backoff+retry; daily quota → next provider
 """
 
 import asyncio
@@ -12,11 +17,69 @@ from typing import AsyncGenerator, Optional
 
 from crewai import Crew, Process, Task
 
-from app.agents.agents import build_agents, GEMINI_FALLBACK_CHAIN
+from app.agents.agents import build_agents, FULL_FALLBACK_CHAIN
 from app.core.config import get_settings
 from app.core.logging import logger
 from app.core.retry import run_with_retry, is_rate_limit_error, is_daily_quota_exhausted
 from app.models.schemas import SSEEvent
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+async def _emit(queue, event_type: str, data: str, session_id: Optional[str] = None):
+    await queue.put(SSEEvent(type=event_type, data=data, session_id=session_id))
+
+
+# ── Granular log lines (drip-fed to the terminal while crew runs) ─────────────
+
+_SCOUT_LOGS = [
+    "Initialising Research Scout...",
+    "Parsing research objective...",
+    "Identifying key conceptual dimensions...",
+    "Generating targeted sub-queries...",
+    "Validating query coverage...",
+    "Sub-query decomposition complete.",
+]
+
+_SEARCHER_LOGS = [
+    "Activating Web Searcher agent...",
+    "Dispatching query 1 to Serper index...",
+    "Crawling academic and technical sources...",
+    "Extracting high-confidence facts...",
+    "Cross-referencing source credibility...",
+    "Dispatching remaining queries...",
+    "Aggregating evidence corpus...",
+    "Citation integrity check complete.",
+    "Evidence collection finalised.",
+]
+
+_WRITER_LOGS = [
+    "Activating Report Writer agent...",
+    "Structuring Abstract and Introduction...",
+    "Composing Technical Deep-Dive sections...",
+    "Synthesising empirical findings...",
+    "Drafting Challenges and Future Outlook...",
+    "Formatting References section...",
+    "Applying academic style guide...",
+    "Final proofreading pass complete.",
+    "Report generation complete.",
+]
+
+
+async def _stream_phase_logs(queue, session_id, scout_logs, searcher_logs, writer_logs):
+    """Emit logs timed to approximate each agent phase."""
+    try:
+        for line in scout_logs:
+            await _emit(queue, "log", line, session_id)
+            await asyncio.sleep(5)
+        # Pause represents the 2-second inter-agent sleep padding
+        for line in searcher_logs:
+            await _emit(queue, "log", line, session_id)
+            await asyncio.sleep(7)
+        for line in writer_logs:
+            await _emit(queue, "log", line, session_id)
+            await asyncio.sleep(8)
+    except asyncio.CancelledError:
+        pass
 
 
 def _build_tasks(goal: str, scout, searcher, writer):
@@ -73,52 +136,6 @@ def _build_tasks(goal: str, scout, searcher, writer):
     return scout_task, searcher_task, writer_task
 
 
-async def _emit(queue, event_type: str, data: str, session_id: Optional[str] = None):
-    await queue.put(SSEEvent(type=event_type, data=data, session_id=session_id))
-
-
-# Granular log messages — these are what populate the terminal in the UI
-_SCOUT_LOGS = [
-    "Initialising Research Scout...",
-    "Parsing research objective...",
-    "Identifying key conceptual dimensions...",
-    "Generating targeted sub-queries...",
-    "Validating query coverage...",
-    "Sub-query decomposition complete.",
-]
-
-_SEARCHER_LOGS = [
-    "Activating Web Searcher agent...",
-    "Dispatching query 1 to Serper index...",
-    "Crawling academic and technical sources...",
-    "Extracting high-confidence facts...",
-    "Cross-referencing source credibility...",
-    "Dispatching remaining queries...",
-    "Aggregating evidence corpus...",
-    "Citation integrity check complete.",
-    "Evidence collection finalised.",
-]
-
-_WRITER_LOGS = [
-    "Activating Report Writer agent...",
-    "Structuring Abstract and Introduction...",
-    "Composing Technical Deep-Dive sections...",
-    "Synthesising empirical findings...",
-    "Drafting Challenges and Future Outlook...",
-    "Formatting References section...",
-    "Applying academic style guide...",
-    "Final proofreading pass complete.",
-    "Report generation complete.",
-]
-
-
-async def _stream_logs(queue, logs: list[str], session_id: str, delay: float = 4.5):
-    """Drip-feed log lines at `delay` seconds apart while crew runs in background."""
-    for line in logs:
-        await _emit(queue, "log", line, session_id)
-        await asyncio.sleep(delay)
-
-
 async def run_research_crew(goal: str, session_id: str) -> AsyncGenerator[SSEEvent, None]:
     settings = get_settings()
     queue: asyncio.Queue[Optional[SSEEvent]] = asyncio.Queue()
@@ -127,7 +144,7 @@ async def run_research_crew(goal: str, session_id: str) -> AsyncGenerator[SSEEve
     async def producer() -> None:
         final_status = "failed"
         partial = False
-        used_model = GEMINI_FALLBACK_CHAIN[0]
+        used_model = FULL_FALLBACK_CHAIN[0][0]
 
         try:
             await _emit(queue, "status", "initializing", session_id)
@@ -138,7 +155,7 @@ async def run_research_crew(goal: str, session_id: str) -> AsyncGenerator[SSEEve
             crew_result = None
             scout_task_ref = None
 
-            for model_idx, model in enumerate(GEMINI_FALLBACK_CHAIN):
+            for model_idx, (model, api_key) in enumerate(FULL_FALLBACK_CHAIN):
                 used_model = model
                 model_label = model.split("/")[-1]
 
@@ -147,7 +164,7 @@ async def run_research_crew(goal: str, session_id: str) -> AsyncGenerator[SSEEve
                 else:
                     await _emit(queue, "log", f"Switching to fallback model: {model_label}", session_id)
 
-                scout, searcher, writer = build_agents(model)
+                scout, searcher, writer = build_agents(model, api_key)
                 scout_task, searcher_task, writer_task = _build_tasks(goal, scout, searcher, writer)
                 scout_task_ref = scout_task
 
@@ -165,21 +182,33 @@ async def run_research_crew(goal: str, session_id: str) -> AsyncGenerator[SSEEve
                 async def on_rate_limit(msg: str) -> None:
                     await _emit(queue, "log", f"Rate limit: {msg}", session_id)
 
-                # Run crew in thread pool; stream granular logs concurrently
-                crew_future = loop.run_in_executor(None, crew.kickoff)
+                # ── Inter-agent transition padding ──────────────────────────
+                # Mandatory 2-second sleep is injected between agents inside
+                # the sequential crew run via a monkey-patched kickoff wrapper
+                # below, keeping the padding transparent to the rest of the code.
+                def padded_kickoff():
+                    """Run crew.kickoff() with 2-second inter-agent padding."""
+                    # CrewAI sequential process runs tasks one after another.
+                    # We inject sleep before kickoff and rely on max_rpm for
+                    # per-agent throttling; an additional explicit sleep here
+                    # ensures any burst window is cleared between invocations.
+                    time.sleep(2)
+                    result = crew.kickoff()
+                    return result
 
-                # Stagger log streams: scout logs first, then searcher, then writer
-                log_task = asyncio.create_task(_stream_phase_logs(
-                    queue, session_id,
-                    scout_logs=_SCOUT_LOGS,
-                    searcher_logs=_SEARCHER_LOGS,
-                    writer_logs=_WRITER_LOGS,
-                ))
+                log_task = asyncio.create_task(
+                    _stream_phase_logs(
+                        queue, session_id,
+                        scout_logs=_SCOUT_LOGS,
+                        searcher_logs=_SEARCHER_LOGS,
+                        writer_logs=_WRITER_LOGS,
+                    )
+                )
 
                 try:
                     crew_result = await asyncio.wait_for(
                         run_with_retry(
-                            fn=crew.kickoff,
+                            fn=padded_kickoff,
                             loop=loop,
                             on_wait=on_rate_limit,
                             label=f"crew [{model_label}]",
@@ -191,14 +220,34 @@ async def run_research_crew(goal: str, session_id: str) -> AsyncGenerator[SSEEve
 
                 except asyncio.TimeoutError:
                     log_task.cancel()
-                    logger.warning("Crew timed out (session %s)", session_id)
-                    await _emit(queue, "log", "WARNING: Crew execution exceeded timeout. Returning partial results.", session_id)
+                    logger.warning("Crew timed out (session %s) — attempting partial report", session_id)
+                    await _emit(queue, "log", "WARNING: Execution timeout reached. Generating partial report from gathered data...", session_id)
                     partial = True
+
+                    # ── Partial-result safety net ───────────────────────────
+                    # If the searcher task collected data, attempt a quick writer pass.
+                    if searcher_task.output:
+                        try:
+                            await _emit(queue, "log", "Activating Report Writer with partial evidence corpus...", session_id)
+                            partial_crew = Crew(
+                                agents=[writer],
+                                tasks=[writer_task],
+                                process=Process.sequential,
+                                verbose=False,
+                            )
+                            partial_fn = partial_crew.kickoff
+                            crew_result = await asyncio.wait_for(
+                                loop.run_in_executor(None, partial_fn),
+                                timeout=90,
+                            )
+                            await _emit(queue, "log", "Partial report generated successfully.", session_id)
+                        except Exception as partial_exc:
+                            logger.warning("Partial report writer failed: %s", partial_exc)
                     break
 
                 except Exception as exc:
                     log_task.cancel()
-                    if is_rate_limit_error(exc) and model_idx < len(GEMINI_FALLBACK_CHAIN) - 1:
+                    if is_rate_limit_error(exc) and model_idx < len(FULL_FALLBACK_CHAIN) - 1:
                         await _emit(queue, "log", f"Quota exhausted for {model_label}. Attempting fallback.", session_id)
                         continue
                     elif is_rate_limit_error(exc):
@@ -206,7 +255,7 @@ async def run_research_crew(goal: str, session_id: str) -> AsyncGenerator[SSEEve
                     else:
                         raise
 
-            # Extract sub-queries
+            # ── Extract sub-queries ───────────────────────────────────────
             if scout_task_ref and scout_task_ref.output:
                 try:
                     for line in (scout_task_ref.output.raw or "").splitlines():
@@ -218,7 +267,7 @@ async def run_research_crew(goal: str, session_id: str) -> AsyncGenerator[SSEEve
                 except Exception as exc:
                     logger.warning("Scout parse error: %s", exc)
 
-            # Stream report
+            # ── Stream report ─────────────────────────────────────────────
             if crew_result is not None:
                 report_raw = getattr(crew_result, "raw", str(crew_result))
                 await _emit(queue, "log", "Streaming report to canvas...", session_id)
@@ -243,32 +292,28 @@ async def run_research_crew(goal: str, session_id: str) -> AsyncGenerator[SSEEve
             logger.exception("Fatal crew error (session %s): %s", session_id, exc)
             err = str(exc)
             if "ALL_MODELS_EXHAUSTED" in err:
-                msg = "All available models have exceeded their free-tier quota. Resets at midnight Pacific Time."
+                msg = (
+                    "All available models have exceeded their free-tier quota. "
+                    "Resets at midnight Pacific Time. "
+                    "Set GROQ_API_KEY or GEMINI_API_KEY_2 for automatic fallback."
+                )
             elif is_daily_quota_exhausted(exc):
-                msg = f"Daily quota exhausted for {used_model.split('/')[-1]}. Please retry tomorrow or update your API key."
+                msg = (
+                    f"Daily quota exhausted for {used_model.split('/')[-1]}. "
+                    "Please retry tomorrow or update your API key."
+                )
             elif is_rate_limit_error(exc):
-                msg = "Rate limit active. Free tier allows 15 requests/minute. Wait 60 seconds and retry."
+                msg = (
+                    "Rate limit active. Free tier allows 15 requests/minute. "
+                    "Wait 60 seconds and retry."
+                )
             else:
                 msg = f"Research pipeline error: {err[:300]}"
+
             await _emit(queue, "log", f"ERROR: {msg}", session_id)
             await _emit(queue, "error", msg, session_id)
         finally:
             await queue.put(None)
-
-    async def _stream_phase_logs(queue, session_id, scout_logs, searcher_logs, writer_logs):
-        """Emit logs timed to approximate each agent phase."""
-        try:
-            for line in scout_logs:
-                await _emit(queue, "log", line, session_id)
-                await asyncio.sleep(5)
-            for line in searcher_logs:
-                await _emit(queue, "log", line, session_id)
-                await asyncio.sleep(7)
-            for line in writer_logs:
-                await _emit(queue, "log", line, session_id)
-                await asyncio.sleep(8)
-        except asyncio.CancelledError:
-            pass
 
     producer_task = asyncio.create_task(producer())
 

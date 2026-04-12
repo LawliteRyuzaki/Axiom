@@ -13,17 +13,23 @@ from app.core.logging import logger
 from app.api.research import router as research_router
 
 
-# ── Lifespan (replaces deprecated on_event) ───────────────────────────────────
+# ── Lifespan ──────────────────────────────────────────────────────────────────
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
     settings = get_settings()
-    logger.info("🚀 Axiom v%s starting up...", settings.app_version)
-    logger.info("Allowed origins: %s", settings.origins_list)
+    env_label = "production" if settings.is_production else "development"
+    logger.info("🚀 Axiom v%s starting (%s)...", settings.app_version, env_label)
+    logger.info("Allowed CORS origins: %s", settings.origins_list)
+
+    # Log available fallback providers so operators can verify config at boot
+    if settings.gemini_api_key_2:
+        logger.info("GEMINI_API_KEY_2 detected — secondary Gemini pool active")
+    if settings.groq_api_key:
+        logger.info("GROQ_API_KEY detected — Groq/Llama-3.1 fallback active")
+
     await connect_db()
     yield
-    # Shutdown
     logger.info("Shutting down Axiom...")
     await disconnect_db()
 
@@ -35,14 +41,15 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title="Axiom API",
-        description="Real-time AI research agent system for MCA students",
+        description="Real-time AI research agent system — multi-agent, SSE-streamed reports",
         version=settings.app_version,
         docs_url="/docs",
         redoc_url="/redoc",
         lifespan=lifespan,
     )
 
-    # ── CORS ──────────────────────────────────────────────────────────────────
+    # ── Dynamic CORS ─────────────────────────────────────────────────────────
+    # origins_list already merges env config + localhost for non-production runs.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.origins_list,
@@ -52,11 +59,13 @@ def create_app() -> FastAPI:
         expose_headers=["X-Session-ID"],
     )
 
-    # ── Global exception handlers ─────────────────────────────────────────────
-
+    # ── Global exception handler ──────────────────────────────────────────────
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
-        logger.exception("Unhandled exception on %s %s: %s", request.method, request.url.path, exc)
+        logger.exception(
+            "Unhandled exception on %s %s: %s",
+            request.method, request.url.path, exc,
+        )
         return JSONResponse(
             status_code=500,
             content={"error": "An unexpected error occurred. Please try again."},
@@ -68,9 +77,11 @@ def create_app() -> FastAPI:
     # ── Root ──────────────────────────────────────────────────────────────────
     @app.get("/", tags=["meta"])
     async def root():
+        settings = get_settings()
         return {
             "service": "Axiom API",
             "version": settings.app_version,
+            "environment": "production" if settings.is_production else "development",
             "docs": "/docs",
             "health": "/api/health",
         }
