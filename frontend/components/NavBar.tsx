@@ -2,134 +2,117 @@
 import AxiomLogo from "./AxiomLogo";
 import type { SessionStatus } from "@/types";
 
-const STATUS_MAP: Record<SessionStatus, { color: string; label: string; pulse: boolean }> = {
-  idle:      { color: "var(--fog)",       label: "Ready",     pulse: false },
-  queued:    { color: "var(--term-amber)", label: "Queued",   pulse: true  },
-  running:   { color: "var(--term-green)", label: "Running",  pulse: true  },
-  completed: { color: "var(--term-green)", label: "Done",     pulse: false },
-  partial:   { color: "var(--term-amber)", label: "Partial",  pulse: false },
-  failed:    { color: "var(--term-red)",   label: "Error",    pulse: false },
+const S: Record<SessionStatus, { dot: string; label: string }> = {
+  idle:      { dot: "var(--border-med)",  label: "Ready"    },
+  queued:    { dot: "var(--term-amber)",  label: "Queued"   },
+  running:   { dot: "var(--term-green)",  label: "Running"  },
+  completed: { dot: "var(--term-green)",  label: "Complete" },
+  partial:   { dot: "var(--term-amber)",  label: "Partial"  },
+  failed:    { dot: "var(--term-red)",    label: "Error"    },
 };
 
-interface Props {
-  status: SessionStatus;
-  onNewSession: () => void;
-  showNav: boolean;
-}
+interface Props { status: SessionStatus; onNewSession: () => void; showNav: boolean; }
 
 export default function NavBar({ status, onNewSession, showNav }: Props) {
-  const s = STATUS_MAP[status] ?? STATUS_MAP.idle;
+  const s = S[status] ?? S.idle;
 
   return (
     <nav
-      className="glass-nav h-14"
-      style={{ display: "flex", alignItems: "center", padding: "0 20px", gap: "12px" }}
+      className="glass-nav"
+      style={{
+        height: 52,
+        display: "flex",
+        alignItems: "center",
+        padding: "0 18px",
+        gap: 10,
+        position: "sticky",
+        top: 0,
+        zIndex: 50,
+      }}
     >
-      {/* Brand — clicking always returns to landing */}
+      {/* Brand */}
       <button
         onClick={onNewSession}
         style={{
-          display: "flex", alignItems: "center", gap: "10px",
-          background: "none", border: "none", cursor: "pointer", padding: "0",
+          display: "flex", alignItems: "center", gap: 9,
+          background: "none", border: "none", cursor: "pointer", padding: 0,
           flexShrink: 0,
         }}
         aria-label="Axiom home"
       >
-        <AxiomLogo size={28} />
+        <AxiomLogo size={22} />
         <span style={{
-          fontFamily: "var(--font-display)",
+          fontFamily: "var(--font-ui)",
           fontWeight: 700,
-          fontSize: "1.0625rem",
-          color: "var(--carbon)",
-          letterSpacing: "-0.03em",
+          fontSize: "0.9375rem",
+          color: "var(--text-primary)",
+          letterSpacing: "-0.025em",
           lineHeight: 1,
         }}>
-          axiom
+          Axiom
         </span>
       </button>
 
-      {/* Divider */}
-      {showNav && (
-        <span style={{ width: 1, height: 16, background: "var(--rule-strong)", flexShrink: 0 }} />
-      )}
+      <div style={{ flex: 1 }} />
 
-      {/* Breadcrumb copy — shown in research mode */}
       {showNav && (
-        <span style={{
-          fontFamily: "var(--font-body)",
-          fontSize: "0.8125rem",
-          fontWeight: 300,
-          color: "var(--mist)",
-          letterSpacing: "0.01em",
-          flex: 1,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}>
-          Synthesis in progress
-        </span>
-      )}
-
-      <div style={{ flex: showNav ? "0 0 auto" : 1 }} />
-
-      {/* Status badge */}
-      {showNav && (
-        <div style={{
-          display: "flex", alignItems: "center", gap: 6,
-          padding: "4px 11px",
-          borderRadius: 99,
-          border: "1px solid var(--rule-strong)",
-          background: "rgba(255,255,255,0.5)",
-        }}>
-          <span style={{
-            width: 6, height: 6, borderRadius: "50%",
-            background: s.color, flexShrink: 0,
-            animation: s.pulse ? "glow-pulse 1.5s ease infinite" : "none",
-          }} />
-          <span style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: "0.6rem",
-            color: "var(--slate)",
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
+        <>
+          {/* Status */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 6,
+            padding: "4px 10px",
+            borderRadius: 99,
+            background: "var(--bg)",
+            border: "1px solid var(--border)",
           }}>
-            {s.label}
-          </span>
-        </div>
-      )}
+            <span style={{
+              width: 6, height: 6, borderRadius: "50%",
+              background: s.dot, flexShrink: 0,
+              animation: (status === "running" || status === "queued")
+                ? "soft-pulse 1.4s ease infinite" : "none",
+            }} />
+            <span style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "0.625rem",
+              fontWeight: 400,
+              color: "var(--text-muted)",
+              textTransform: "uppercase",
+              letterSpacing: "0.09em",
+            }}>
+              {s.label}
+            </span>
+          </div>
 
-      {/* New session CTA */}
-      {showNav && (
-        <button
-          onClick={onNewSession}
-          style={{
-            fontFamily: "var(--font-body)",
-            fontSize: "0.8125rem",
-            fontWeight: 500,
-            color: "var(--slate)",
-            background: "rgba(255,255,255,0.5)",
-            border: "1px solid var(--rule-strong)",
-            borderRadius: "8px",
-            padding: "5px 14px",
-            cursor: "pointer",
-            transition: "all 0.15s",
-            whiteSpace: "nowrap",
-          }}
-          onMouseEnter={e => {
-            const el = e.currentTarget as HTMLElement;
-            el.style.background = "var(--crimson-faint)";
-            el.style.borderColor = "var(--crimson-mid)";
-            el.style.color = "var(--crimson)";
-          }}
-          onMouseLeave={e => {
-            const el = e.currentTarget as HTMLElement;
-            el.style.background = "rgba(255,255,255,0.5)";
-            el.style.borderColor = "var(--rule-strong)";
-            el.style.color = "var(--slate)";
-          }}
-        >
-          New session
-        </button>
+          <button
+            onClick={onNewSession}
+            style={{
+              fontFamily: "var(--font-ui)",
+              fontSize: "0.8125rem",
+              fontWeight: 500,
+              color: "var(--text-muted)",
+              background: "transparent",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius)",
+              padding: "5px 13px",
+              cursor: "pointer",
+              transition: "all 0.14s",
+            }}
+            onMouseEnter={e => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.color = "var(--text-primary)";
+              el.style.borderColor = "var(--border-med)";
+              el.style.background = "var(--surface)";
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.color = "var(--text-muted)";
+              el.style.borderColor = "var(--border)";
+              el.style.background = "transparent";
+            }}
+          >
+            New session
+          </button>
+        </>
       )}
     </nav>
   );

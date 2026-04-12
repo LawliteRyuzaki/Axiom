@@ -4,23 +4,21 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { SelectedModel } from "@/types";
 
 const CHIPS = [
-  { sym: "⌥", label: "Technical Audit",    prompt: "Conduct a comprehensive technical audit of "    },
-  { sym: "∑", label: "Literature Review",  prompt: "Write a deep literature review on "              },
-  { sym: "◈", label: "Competitive Intel",  prompt: "Analyse the competitive landscape and state of the art in " },
+  { label: "Technical deep-dive",  prompt: "Conduct a technical deep-dive into "           },
+  { label: "Literature review",    prompt: "Write a literature review on "                  },
+  { label: "Competitive analysis", prompt: "Analyse the competitive landscape in "          },
+  { label: "State of the art",     prompt: "Summarise the current state of the art in "    },
 ];
 
-// Cycling placeholder lines — each one is a real research prompt
 const PLACEHOLDERS = [
-  "What's the state of the art in diffusion-based image synthesis?",
-  "How does retrieval-augmented generation actually work?",
-  "Compare transformer vs. Mamba architectures for sequence modelling.",
-  "What are the open problems in multi-agent reinforcement learning?",
-  "Explain the technical tradeoffs in LLM quantisation techniques.",
+  "Ask a research question or paste a topic...",
+  "e.g. How does retrieval-augmented generation work?",
+  "e.g. Diffusion models vs. GANs for image synthesis",
+  "e.g. Open problems in multi-agent reinforcement learning",
+  "e.g. Privacy techniques in federated learning",
 ];
 
-interface Props {
-  onSubmit: (goal: string, model: SelectedModel) => void;
-}
+interface Props { onSubmit: (goal: string, model: SelectedModel) => void; }
 
 export default function LandingView({ onSubmit }: Props) {
   const [goal,          setGoal]          = useState("");
@@ -28,123 +26,78 @@ export default function LandingView({ onSubmit }: Props) {
   const [showModelMenu, setShowModelMenu] = useState(false);
   const [phIdx,         setPhIdx]         = useState(0);
   const [error,         setError]         = useState("");
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const ref = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    const t = setInterval(() => setPhIdx(i => (i + 1) % PLACEHOLDERS.length), 4000);
+    const t = setInterval(() => setPhIdx(i => (i + 1) % PLACEHOLDERS.length), 4200);
     return () => clearInterval(t);
   }, []);
 
   useEffect(() => {
-    const el = textareaRef.current;
+    const el = ref.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 130)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
   }, [goal]);
 
   const submit = () => {
     const g = goal.trim();
-    if (g.length < 10) { setError("Give it a bit more to go on — 10 chars minimum."); return; }
+    if (g.length < 10) { setError("Please be a bit more specific — at least 10 characters."); return; }
     setError("");
     onSubmit(g, model);
   };
 
   return (
     <div className="landing-wrap">
-
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <motion.div
-        initial={{ opacity: 0, y: 24 }}
+        initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        style={{ textAlign: "center", marginBottom: "2.75rem", position: "relative", zIndex: 1 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        style={{
+          textAlign: "center",
+          marginBottom: "2.25rem",
+          position: "relative",
+          zIndex: 1,
+        }}
       >
-        {/* Eyebrow */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.08, duration: 0.5 }}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "5px 14px",
-            borderRadius: 99,
-            border: "1px solid var(--crimson-mid)",
-            background: "var(--crimson-faint)",
-            marginBottom: "1.375rem",
-          }}
-        >
-          <span style={{
-            width: 5, height: 5, borderRadius: "50%",
-            background: "var(--crimson)",
-            animation: "glow-pulse 2s ease infinite",
-          }} />
-          <span style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: "0.65rem",
-            color: "var(--crimson)",
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
-          }}>
-            Multi-agent · Live synthesis
-          </span>
-        </motion.div>
-
-        {/* Main headline */}
         <h1 style={{
-          fontFamily: "var(--font-display)",
-          fontSize: "clamp(2.6rem, 6vw, 4rem)",
+          fontFamily: "var(--font-ui)",
+          fontSize: "clamp(1.875rem, 4.5vw, 2.75rem)",
           fontWeight: 700,
-          color: "var(--carbon)",
-          lineHeight: 1.06,
-          letterSpacing: "-0.04em",
-          marginBottom: "1rem",
+          color: "var(--text-primary)",
+          lineHeight: 1.12,
+          letterSpacing: "-0.03em",
+          marginBottom: "0.875rem",
         }}>
-          Think deeper,<br />
-          <span style={{ color: "var(--crimson)" }}>know faster.</span>
+          Research, at the speed<br />of a question.
         </h1>
 
-        {/* Sub-headline */}
         <p style={{
-          fontFamily: "var(--font-body)",
-          fontWeight: 300,
-          fontSize: "1.0625rem",
-          color: "var(--slate)",
-          lineHeight: 1.6,
-          maxWidth: "440px",
+          fontFamily: "var(--font-ui)",
+          fontWeight: 400,
+          fontSize: "1rem",
+          color: "var(--text-muted)",
+          lineHeight: 1.65,
+          maxWidth: "420px",
           margin: "0 auto",
         }}>
-          Drop a research question. Axiom deploys a crew of AI agents to
-          search, read, and synthesise — then hands you a proper report.
+          Axiom deploys a multi-agent crew to search the web,
+          gather evidence, and synthesise a cited report —
+          in the time it takes to read one paper.
         </p>
       </motion.div>
 
-      {/* ── Search pill ──────────────────────────────────────────────── */}
+      {/* ── Search bar ───────────────────────────────────────────────── */}
       <motion.div
-        initial={{ opacity: 0, y: 18, scale: 0.975 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.55, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
-        style={{ width: "100%", maxWidth: "700px", position: "relative", zIndex: 2 }}
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, delay: 0.14, ease: [0.22, 1, 0.36, 1] }}
+        style={{ width: "100%", maxWidth: "660px", position: "relative", zIndex: 2 }}
       >
-        <div className="search-pill">
-          {/* Context attach button */}
-          <button
-            type="button"
-            className="pill-icon-btn"
-            title="Attach context"
-            aria-label="Attach context"
-          >
-            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-              <path d="M7.5 2.5v10M2.5 7.5h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-          </button>
-
-          <div className="pill-sep" />
-
-          {/* Textarea */}
+        <div className="search-bar">
           <textarea
-            ref={textareaRef}
+            ref={ref}
             value={goal}
             onChange={e => { setGoal(e.target.value); setError(""); }}
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); }}}
@@ -153,114 +106,112 @@ export default function LandingView({ onSubmit }: Props) {
             aria-label="Research question"
           />
 
-          <div className="pill-sep" />
+          <div className="bar-actions">
+            {/* Model selector */}
+            <div style={{ position: "relative" }}>
+              <button
+                type="button"
+                className="bar-btn"
+                onClick={() => setShowModelMenu(v => !v)}
+                style={{ gap: 4 }}
+              >
+                <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+                  <circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" strokeWidth="1.1"/>
+                  <path d="M5.5 3v2.5l1.5 0.9" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                </svg>
+                {model === "flash" ? "Flash" : "Pro"}
+                <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
+                  <path d="M2.5 3.5l2 2 2-2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                </svg>
+              </button>
 
-          {/* Model selector */}
-          <div style={{ position: "relative", flexShrink: 0 }}>
+              <AnimatePresence>
+                {showModelMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.97 }}
+                    transition={{ duration: 0.14 }}
+                    style={{
+                      position: "absolute",
+                      bottom: "calc(100% + 8px)",
+                      right: 0,
+                      background: "var(--surface)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "var(--radius-lg)",
+                      padding: 5,
+                      boxShadow: "0 10px 30px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06)",
+                      minWidth: 170,
+                      zIndex: 99,
+                    }}
+                  >
+                    {[
+                      { id: "flash", name: "Gemini Flash", meta: "Fast · Free tier"  },
+                      { id: "pro",   name: "Gemini Pro",   meta: "Powerful · Paid"   },
+                    ].map(opt => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => { setModel(opt.id as SelectedModel); setShowModelMenu(false); }}
+                        style={{
+                          display: "block", width: "100%",
+                          padding: "8px 10px",
+                          borderRadius: "var(--radius)",
+                          background: model === opt.id ? "var(--accent-light)" : "transparent",
+                          border: "none", cursor: "pointer", textAlign: "left",
+                        }}
+                        onMouseEnter={e => { if (model !== opt.id) (e.currentTarget as HTMLElement).style.background = "var(--bg)"; }}
+                        onMouseLeave={e => { if (model !== opt.id) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                      >
+                        <span style={{ display: "block", fontFamily: "var(--font-ui)", fontWeight: 500, fontSize: "0.8125rem", color: "var(--text-primary)" }}>
+                          {opt.name}
+                        </span>
+                        <span style={{ display: "block", fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-faint)", marginTop: 1 }}>
+                          {opt.meta}
+                        </span>
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Submit */}
             <button
               type="button"
-              className="model-btn"
-              onClick={() => setShowModelMenu(v => !v)}
-              aria-expanded={showModelMenu}
+              className="bar-submit"
+              onClick={submit}
+              disabled={goal.trim().length < 10}
+              aria-label="Run research"
             >
-              <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                <circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" strokeWidth="1.2"/>
-                <path d="M5.5 3v2.5l1.5 1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-              </svg>
-              {model === "flash" ? "Flash" : "Pro"}
-              <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
-                <path d="M2 3.5l2.5 2.5L7 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                <path d="M6.5 10.5V2.5M2.5 6.5l4-4 4 4" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
-
-            <AnimatePresence>
-              {showModelMenu && (
-                <motion.div
-                  initial={{ opacity: 0, y: 6, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 4, scale: 0.97 }}
-                  transition={{ duration: 0.16 }}
-                  style={{
-                    position: "absolute",
-                    bottom: "calc(100% + 10px)",
-                    right: 0,
-                    background: "#fff",
-                    border: "1px solid var(--rule-strong)",
-                    borderRadius: "12px",
-                    padding: "6px",
-                    boxShadow: "0 10px 32px rgba(26,26,26,0.12), 0 2px 8px rgba(26,26,26,0.06)",
-                    minWidth: "176px",
-                    zIndex: 99,
-                  }}
-                >
-                  {[
-                    { id: "flash", name: "Gemini Flash", tag: "Fast  ·  Free tier" },
-                    { id: "pro",   name: "Gemini Pro",   tag: "Powerful  ·  Paid"  },
-                  ].map(opt => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => { setModel(opt.id as SelectedModel); setShowModelMenu(false); }}
-                      style={{
-                        display: "block", width: "100%",
-                        padding: "9px 11px",
-                        borderRadius: "8px",
-                        background: model === opt.id ? "var(--crimson-faint)" : "transparent",
-                        border: "none", cursor: "pointer", textAlign: "left",
-                        transition: "background 0.12s",
-                      }}
-                      onMouseEnter={e => { if (model !== opt.id) (e.currentTarget as HTMLElement).style.background = "var(--carbon-08)"; }}
-                      onMouseLeave={e => { if (model !== opt.id) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-                    >
-                      <span style={{ display: "block", fontFamily: "var(--font-body)", fontWeight: 500, fontSize: "0.85rem", color: "var(--carbon)" }}>
-                        {opt.name}
-                      </span>
-                      <span style={{ display: "block", fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--mist)", marginTop: "1px" }}>
-                        {opt.tag}
-                      </span>
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
-
-          {/* Submit */}
-          <button
-            type="button"
-            className="submit-btn"
-            onClick={submit}
-            disabled={goal.trim().length < 10}
-            aria-label="Run research"
-          >
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-              <path d="M6.5 11V2M2 6.5l4.5-4.5 4.5 4.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
         </div>
 
-        {/* Error */}
         {error && (
           <p style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: "0.67rem",
-            color: "var(--crimson)",
-            marginTop: "7px",
-            paddingLeft: "14px",
+            fontFamily: "var(--font-ui)",
+            fontSize: "0.75rem",
+            color: "var(--accent)",
+            marginTop: 7,
+            paddingLeft: 4,
           }}>
             {error}
           </p>
         )}
       </motion.div>
 
-      {/* ── Action chips ─────────────────────────────────────────────── */}
+      {/* ── Chips ────────────────────────────────────────────────────── */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, delay: 0.3, ease: "easeOut" }}
+        transition={{ duration: 0.4, delay: 0.26 }}
         style={{
-          display: "flex", flexWrap: "wrap", gap: "8px",
-          marginTop: "18px", justifyContent: "center",
+          display: "flex", flexWrap: "wrap", gap: "7px",
+          marginTop: "14px", justifyContent: "center",
           position: "relative", zIndex: 1,
         }}
       >
@@ -269,17 +220,11 @@ export default function LandingView({ onSubmit }: Props) {
             key={c.label}
             type="button"
             className="chip"
-            onClick={() => { setGoal(c.prompt); setError(""); textareaRef.current?.focus(); }}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.32 + i * 0.06 }}
+            onClick={() => { setGoal(c.prompt); setError(""); ref.current?.focus(); }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.28 + i * 0.05 }}
           >
-            <span className="chip-sym" style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: "0.7rem",
-            }}>
-              {c.sym}
-            </span>
             {c.label}
           </motion.button>
         ))}
@@ -289,18 +234,19 @@ export default function LandingView({ onSubmit }: Props) {
       <motion.p
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.55 }}
+        transition={{ delay: 0.5 }}
         style={{
-          marginTop: "2.25rem",
-          fontFamily: "var(--font-body)",
-          fontWeight: 300,
+          marginTop: "2rem",
+          fontFamily: "var(--font-ui)",
           fontSize: "0.75rem",
-          color: "var(--fog)",
+          fontWeight: 400,
+          color: "var(--text-faint)",
           textAlign: "center",
           position: "relative", zIndex: 1,
+          lineHeight: 1.6,
         }}
       >
-        Powered by Gemini · Serper.dev · CrewAI &nbsp;·&nbsp; Research takes 60 – 120 s
+        Powered by Gemini · Serper.dev · CrewAI &nbsp;·&nbsp; Reports take 60 – 120 seconds
       </motion.p>
     </div>
   );

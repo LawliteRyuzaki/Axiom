@@ -1,48 +1,37 @@
 interface Props {
   size?: number;
-  showWordmark?: boolean;
 }
 
-export default function AxiomLogo({ size = 28, showWordmark = false }: Props) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: showWordmark ? "10px" : "0" }}>
-      {/* Mark: a precision compass-rose / signal-burst — 4 diamond facets
-          arranged in a tight radial pattern. Conveys synthesis, convergence,
-          intelligence radiating from a core. Crimson fill, no bounding box. */}
-      <svg
-        width={size}
-        height={size}
-        viewBox="0 0 36 36"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        aria-hidden={showWordmark}
-        aria-label={showWordmark ? undefined : "Axiom"}
-      >
-        {/* Top facet */}
-        <path d="M18 2 L22 14 L18 18 L14 14 Z" fill="#8B0000" />
-        {/* Right facet */}
-        <path d="M34 18 L22 14 L18 18 L22 22 Z" fill="#6D0000" />
-        {/* Bottom facet */}
-        <path d="M18 34 L14 22 L18 18 L22 22 Z" fill="#8B0000" fillOpacity="0.75" />
-        {/* Left facet */}
-        <path d="M2 18 L14 22 L18 18 L14 14 Z" fill="#6D0000" fillOpacity="0.85" />
-        {/* Centre dot — convergence point */}
-        <circle cx="18" cy="18" r="2.5" fill="#F2F0EA" />
-      </svg>
+/*
+  Mark: Three stacked horizontal bars, descending in width left-to-right.
+  Reads as a data hierarchy / synthesis funnel — raw inputs → refined output.
+  Clean, timeless, works at any size. No color fill needed — pure carbon.
+  Inspired by the signal-to-noise reduction that Axiom performs on research.
+*/
+export default function AxiomLogo({ size = 24 }: Props) {
+  const bar = Math.round(size * 0.55);  // bar width at 55% of container
+  const h   = Math.round(size * 0.09); // bar height
+  const gap = Math.round(size * 0.14); // gap between bars
+  const r   = Math.round(h * 0.5);     // fully rounded ends
 
-      {showWordmark && (
-        <span style={{
-          fontFamily: "'Syne', sans-serif",
-          fontWeight: 700,
-          fontSize: `${size * 0.75}px`,
-          color: "var(--carbon)",
-          letterSpacing: "-0.03em",
-          lineHeight: 1,
-          userSelect: "none",
-        }}>
-          axiom
-        </span>
-      )}
-    </div>
+  const totalH = h * 3 + gap * 2;
+  const offsetY = Math.round((size - totalH) / 2);
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-label="Axiom"
+    >
+      {/* Top bar — full width */}
+      <rect x={0} y={offsetY} width={bar} height={h} rx={r} fill="var(--accent)" />
+      {/* Middle bar — 75% width */}
+      <rect x={0} y={offsetY + h + gap} width={Math.round(bar * 0.72)} height={h} rx={r} fill="var(--text-primary)" />
+      {/* Bottom bar — 46% width */}
+      <rect x={0} y={offsetY + (h + gap) * 2} width={Math.round(bar * 0.44)} height={h} rx={r} fill="var(--text-primary)" opacity="0.35" />
+    </svg>
   );
 }

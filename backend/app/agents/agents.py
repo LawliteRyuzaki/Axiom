@@ -35,7 +35,7 @@ def _build_llm(model: str) -> LLM:
         api_key=settings.gemini_api_key,
         temperature=0.25,
         max_tokens=8192,
-        timeout=50,
+        timeout=120,
     )
 
 
@@ -65,7 +65,7 @@ def build_research_scout(model: str) -> Agent:
         verbose=True,
         allow_delegation=False,
         max_iter=3,
-        max_execution_time=45,
+        max_execution_time=120,
         max_rpm=3,
     )
 
@@ -91,7 +91,7 @@ def build_web_searcher(model: str) -> Agent:
         verbose=True,
         allow_delegation=False,
         max_iter=12,
-        max_execution_time=75,
+        max_execution_time=120,
         max_rpm=3,
     )
 
@@ -136,7 +136,7 @@ def build_report_writer(model: str) -> Agent:
         verbose=True,
         allow_delegation=False,
         max_iter=3,
-        max_execution_time=90,
+        max_execution_time=120,
         max_rpm=3,
     )
 

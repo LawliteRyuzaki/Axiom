@@ -6,14 +6,14 @@ import type { SessionSummary } from "@/types";
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const DOT: Record<string, string> = {
   completed: "var(--term-green)", partial: "var(--term-amber)",
-  failed: "var(--term-red)",      running: "var(--crimson)",
+  failed: "var(--term-red)", running: "var(--accent)",
 };
 
 export default function InvestigationSidebar({
   refreshKey, onSelect,
 }: { refreshKey: number; onSelect: (id: string) => void }) {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
-  const [loading,  setLoading]  = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -26,32 +26,48 @@ export default function InvestigationSidebar({
 
   return (
     <aside className="sidebar-panel">
-      <div style={{ padding: "13px 16px", borderBottom: "1px solid var(--rule)", flexShrink: 0 }}>
+      <div style={{
+        padding: "14px 16px 10px",
+        borderBottom: "1px solid var(--border)",
+        flexShrink: 0,
+      }}>
         <p style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: "0.6rem",
+          fontFamily: "var(--font-ui)",
+          fontSize: "0.6875rem",
+          fontWeight: 600,
+          color: "var(--text-muted)",
           textTransform: "uppercase",
-          letterSpacing: "0.13em",
-          color: "var(--mist)",
+          letterSpacing: "0.08em",
         }}>
           Sessions
         </p>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", padding: "6px 0" }}>
-        {loading && [...Array(4)].map((_, i) => (
-          <div key={i} style={{
-            margin: "5px 12px", height: 44, borderRadius: 7,
-            background: "linear-gradient(90deg, var(--carbon-08) 25%, var(--alabaster-d) 50%, var(--carbon-08) 75%)",
-            backgroundSize: "200% 100%",
-            animation: "shimmer 1.6s infinite",
-          }} />
-        ))}
+      <div style={{ flex: 1, overflowY: "auto" }}>
+        {loading && (
+          <div style={{ padding: "8px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+            {[100, 80, 90].map((w, i) => (
+              <div key={i} style={{
+                height: 48, borderRadius: "var(--radius)",
+                background: `linear-gradient(90deg, var(--border-light) 25%, var(--border) 50%, var(--border-light) 75%)`,
+                backgroundSize: "200% 100%",
+                animation: "shimmer 1.5s infinite",
+                width: `${w}%`,
+              }} />
+            ))}
+          </div>
+        )}
 
         {!loading && sessions.length === 0 && (
-          <div style={{ padding: "2.5rem 1rem", textAlign: "center" }}>
-            <p style={{ fontFamily: "var(--font-body)", fontWeight: 300, fontSize: "0.8125rem", color: "var(--fog)", lineHeight: 1.5 }}>
-              No sessions yet.<br />Start your first research.
+          <div style={{ padding: "3rem 1.25rem", textAlign: "center" }}>
+            <p style={{
+              fontFamily: "var(--font-ui)",
+              fontSize: "0.8125rem",
+              color: "var(--text-faint)",
+              lineHeight: 1.6,
+              fontWeight: 400,
+            }}>
+              No sessions yet
             </p>
           </div>
         )}
@@ -59,30 +75,32 @@ export default function InvestigationSidebar({
         {!loading && sessions.map((s, i) => (
           <motion.button
             key={s.id}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.035, ease: "easeOut" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: i * 0.03 }}
             onClick={() => onSelect(s.id)}
             style={{
               display: "block", width: "100%", textAlign: "left",
-              padding: "9px 16px",
+              padding: "10px 16px",
               background: "none", border: "none",
-              borderBottom: "1px solid var(--rule)",
+              borderBottom: "1px solid var(--border-light)",
               cursor: "pointer", transition: "background 0.12s",
             }}
-            onMouseEnter={e => (e.currentTarget.style.background = "var(--carbon-08)")}
+            onMouseEnter={e => (e.currentTarget.style.background = "var(--overlay-soft)")}
             onMouseLeave={e => (e.currentTarget.style.background = "none")}
           >
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 9 }}>
+            <div style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
               <span style={{
-                marginTop: 5, width: 5, height: 5, borderRadius: "50%",
-                background: DOT[s.status] ?? "var(--fog)", flexShrink: 0,
+                marginTop: 5, width: 5, height: 5, borderRadius: "50%", flexShrink: 0,
+                background: DOT[s.status] ?? "var(--border-med)",
               }} />
               <div style={{ minWidth: 0 }}>
                 <p style={{
-                  fontFamily: "var(--font-body)",
-                  fontSize: "0.8125rem", fontWeight: 400,
-                  color: "var(--carbon)", lineHeight: 1.45,
+                  fontFamily: "var(--font-ui)",
+                  fontSize: "0.8125rem",
+                  fontWeight: 400,
+                  color: "var(--text-secondary)",
+                  lineHeight: 1.45,
                   overflow: "hidden",
                   display: "-webkit-box",
                   WebkitLineClamp: 2,
@@ -91,7 +109,11 @@ export default function InvestigationSidebar({
                 }}>
                   {s.goal}
                 </p>
-                <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.59rem", color: "var(--fog)" }}>
+                <p style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "0.6rem",
+                  color: "var(--text-faint)",
+                }}>
                   {new Date(s.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
                   {s.duration_seconds ? ` · ${s.duration_seconds}s` : ""}
                 </p>
@@ -101,8 +123,12 @@ export default function InvestigationSidebar({
         ))}
       </div>
 
-      <div style={{ padding: "8px 16px", borderTop: "1px solid var(--rule)", flexShrink: 0 }}>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.59rem", color: "var(--fog)" }}>
+      <div style={{
+        padding: "8px 16px",
+        borderTop: "1px solid var(--border)",
+        flexShrink: 0,
+      }}>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-faint)" }}>
           {sessions.length} session{sessions.length !== 1 ? "s" : ""}
         </span>
       </div>

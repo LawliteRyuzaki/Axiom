@@ -4,25 +4,29 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { LogEntry, SessionStatus, ResearchState } from "@/types";
 
 const STATUS_CFG: Partial<Record<SessionStatus, { label: string; color: string }>> = {
-  idle:      { label: "STANDBY",  color: "#6B6860" },
-  queued:    { label: "QUEUED",   color: "#FBBF24" },
-  running:   { label: "LIVE",     color: "#34D399" },
-  completed: { label: "DONE",     color: "#34D399" },
-  partial:   { label: "PARTIAL",  color: "#FBBF24" },
-  failed:    { label: "ERROR",    color: "#F87171" },
+  idle:      { label: "IDLE",     color: "var(--term-dim)"   },
+  queued:    { label: "QUEUED",   color: "var(--term-amber)" },
+  running:   { label: "RUNNING",  color: "var(--term-green)" },
+  completed: { label: "DONE",     color: "var(--term-green)" },
+  partial:   { label: "PARTIAL",  color: "var(--term-amber)" },
+  failed:    { label: "ERROR",    color: "var(--term-red)"   },
 };
-const FALLBACK = { label: "UNKNOWN", color: "#888888" };
+const FALLBACK = { label: "IDLE", color: "#888" };
 
-function logClass(lvl: LogEntry["level"]) {
-  return { success: "log-success", warn: "log-warn", error: "log-error", dim: "log-dim", default: "log-default" }[lvl] ?? "log-default";
+function logCls(lvl: LogEntry["level"]) {
+  const m: Record<LogEntry["level"], string> = {
+    success: "log-success", warn: "log-warn",
+    error: "log-error", dim: "log-dim", default: "log-default",
+  };
+  return m[lvl] ?? "log-default";
 }
 
 export default function AgentHub({ state }: { state: ResearchState }) {
   const { logs, queries, status, model, duration, sessionId, partial } = state;
   const cfg = STATUS_CFG[status] ?? FALLBACK;
   const isRunning = status === "running";
-  const isDone    = status === "completed" || status === "partial";
-  const endRef    = useRef<HTMLDivElement>(null);
+  const isDone = status === "completed" || status === "partial";
+  const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -30,70 +34,72 @@ export default function AgentHub({ state }: { state: ResearchState }) {
 
   return (
     <aside className="hub-panel">
-      {/* Panel header */}
+      {/* Header */}
       <div style={{
-        padding: "11px 14px",
-        borderBottom: "1px solid var(--rule)",
+        padding: "12px 14px",
+        borderBottom: "1px solid var(--border)",
         display: "flex", alignItems: "center", justifyContent: "space-between",
         flexShrink: 0,
+        background: "var(--sidebar-bg)",
       }}>
         <span style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: "0.6rem",
+          fontFamily: "var(--font-ui)",
+          fontSize: "0.6875rem",
+          fontWeight: 600,
+          color: "var(--text-muted)",
           textTransform: "uppercase",
-          letterSpacing: "0.13em",
-          color: "var(--mist)",
+          letterSpacing: "0.08em",
         }}>
-          Agent Hub
+          Agent Log
         </span>
         <span style={{
           fontFamily: "var(--font-mono)",
           fontSize: "0.6rem",
-          color: cfg?.color || "#888888",
-          letterSpacing: "0.08em",
+          color: cfg?.color || "#888",
+          letterSpacing: "0.07em",
         }}>
-          {cfg?.label || "UNKNOWN"}
+          {cfg?.label || "IDLE"}
         </span>
       </div>
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        {/* Traffic light titlebar */}
+        {/* Titlebar */}
         <div style={{
-          background: "#161616",
-          padding: "7px 11px",
+          background: "#161B22",
+          padding: "7px 12px",
           display: "flex", alignItems: "center", gap: 5,
           flexShrink: 0,
+          borderBottom: "1px solid #21262D",
         }}>
-          {["#FF5F57", "#FFBD2E", "#28C840"].map(c => (
-            <span key={c} style={{ width: 8, height: 8, borderRadius: "50%", background: c }} />
+          {["#FF5F57","#FFBD2E","#28C840"].map(c => (
+            <span key={c} style={{ width: 8, height: 8, borderRadius: "50%", background: c, flexShrink: 0 }} />
           ))}
           <span style={{
-            marginLeft: 9,
+            marginLeft: 8,
             fontFamily: "var(--font-mono)",
-            fontSize: "0.59rem",
-            color: "var(--term-dim)",
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
+            fontSize: "0.6rem",
+            color: "#484F58",
+            letterSpacing: "0.06em",
           }}>
-            axiom-runtime — zsh
+            axiom-runtime
           </span>
         </div>
 
-        {/* Log stream */}
+        {/* Log */}
         <div className="terminal">
-          <div className="log-dim" style={{ marginBottom: 7 }}>
-            $ axiom --session {sessionId?.slice(0, 8) ?? "--------"}
+          <div className="log-dim" style={{ marginBottom: 8 }}>
+            $ axiom run --session {sessionId?.slice(0, 8) ?? "--------"}
           </div>
 
           <AnimatePresence initial={false}>
             {logs.map(entry => (
               <motion.div
                 key={entry.id}
-                initial={{ opacity: 0, x: -5 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.14, ease: "easeOut" }}
-                className={logClass(entry.level)}
-                style={{ display: "flex", gap: 9, lineHeight: 1.68 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.12 }}
+                className={logCls(entry.level)}
+                style={{ display: "flex", gap: 10, lineHeight: 1.7 }}
               >
                 <span className="log-dim" style={{ flexShrink: 0, userSelect: "none" }}>
                   {entry.timestamp}
@@ -107,8 +113,7 @@ export default function AgentHub({ state }: { state: ResearchState }) {
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 5 }}>
               <span className="log-dim">$</span>
               <span style={{
-                display: "inline-block",
-                width: 6, height: 13,
+                display: "inline-block", width: 6, height: 13,
                 background: "var(--term-green)",
                 animation: "blink 1s linear infinite",
               }} />
@@ -118,13 +123,13 @@ export default function AgentHub({ state }: { state: ResearchState }) {
           {isDone && (
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              transition={{ delay: 0.2, ease: "easeOut" }}
-              style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid #272727" }}
+              transition={{ delay: 0.2 }}
+              style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid #21262D" }}
             >
-              <div className="log-success">Session complete.</div>
+              <div className="log-success">Process complete.</div>
               {model    && <div className="log-dim">Model: {model}</div>}
               {duration && <div className="log-dim">Elapsed: {duration}s</div>}
-              {partial  && <div className="log-warn">Note: partial — crew timed out.</div>}
+              {partial  && <div className="log-warn">Partial result — timeout reached.</div>}
             </motion.div>
           )}
 
@@ -134,34 +139,33 @@ export default function AgentHub({ state }: { state: ResearchState }) {
         {/* Queries */}
         {queries.length > 0 && (
           <div style={{
-            borderTop: "1px solid #272727",
-            background: "#0C0C0C",
-            padding: "10px 12px",
-            flexShrink: 0,
+            borderTop: "1px solid #21262D",
+            background: "#0D1117",
+            padding: "10px 12px", flexShrink: 0,
           }}>
             <p style={{
               fontFamily: "var(--font-mono)",
-              fontSize: "0.59rem",
+              fontSize: "0.6rem",
+              color: "#484F58",
               textTransform: "uppercase",
-              letterSpacing: "0.12em",
-              color: "var(--term-dim)",
+              letterSpacing: "0.1em",
               marginBottom: 8,
             }}>
-              Dispatched queries
+              Search queries
             </p>
             <div style={{ maxHeight: 110, overflowY: "auto", display: "flex", flexDirection: "column", gap: 5 }}>
               {queries.map((q, i) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0, y: 3 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05, ease: "easeOut" }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: i * 0.04 }}
                   style={{ display: "flex", gap: 8, alignItems: "flex-start" }}
                 >
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.63rem", color: "var(--crimson)", flexShrink: 0 }}>
-                    [{String(i + 1).padStart(2, "0")}]
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--accent)", flexShrink: 0 }}>
+                    {String(i + 1).padStart(2, "0")}
                   </span>
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.63rem", color: "var(--term-text)", lineHeight: 1.5, wordBreak: "break-word" }}>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--term-text)", lineHeight: 1.55, wordBreak: "break-word" }}>
                     {q}
                   </span>
                 </motion.div>
@@ -173,15 +177,15 @@ export default function AgentHub({ state }: { state: ResearchState }) {
 
       {/* Footer */}
       <div style={{
-        padding: "7px 14px",
-        borderTop: "1px solid var(--rule)",
+        padding: "8px 14px",
+        borderTop: "1px solid var(--border)",
         display: "flex", justifyContent: "space-between",
-        flexShrink: 0,
+        flexShrink: 0, background: "var(--sidebar-bg)",
       }}>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.59rem", color: "var(--fog)" }}>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-faint)" }}>
           {logs.length} events
         </span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.59rem", color: "var(--fog)" }}>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-faint)" }}>
           gemini-2.0-flash
         </span>
       </div>
