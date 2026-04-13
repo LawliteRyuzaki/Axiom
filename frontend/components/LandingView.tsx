@@ -235,7 +235,7 @@ export default function LandingView({ onSubmit, selectedModel, onModelChange }: 
           letterSpacing: "-0.03em",
           marginBottom:  "0.875rem",
         }}>
-          Research, at the speed<br />of a question.
+          Intelligence, synthesised.<br />
         </h1>
         <p style={{
           fontFamily: "var(--font-ui)",
@@ -247,8 +247,8 @@ export default function LandingView({ onSubmit, selectedModel, onModelChange }: 
           margin:     "0 auto",
         }}>
           Axiom deploys a multi-agent crew to search the web,
-          gather evidence, and synthesise a cited report —
-          in the time it takes to read one paper.
+          gather evidence, and synthesise a cited report in 
+          the time it takes to read one paper.
         </p>
       </motion.div>
 

@@ -5,6 +5,7 @@ import remarkGfm from "remark-gfm";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Components } from "react-markdown";
 import TableOfContents from "./TableOfContents";
+import ReportAnalytics from "./ReportAnalytics";
 import type { ResearchState } from "@/types";
 
 const slug = (t: string) =>
@@ -69,12 +70,8 @@ export default function ResearchCanvas({ state }: { state: ResearchState }) {
 
   return (
     <div className="canvas-scroll">
-      {/*
-        max-w-3xl ≈ 768px — strict column width for whitepaper readability.
-        The prose override below sets text-lg (1.125rem) + leading-relaxed (1.75).
-      */}
       <div style={{
-        maxWidth: "48rem",   /* 768px = Tailwind max-w-3xl */
+        maxWidth: "48rem",
         margin: "0 auto",
         padding: "0 2.5rem",
       }}>
@@ -207,13 +204,13 @@ export default function ResearchCanvas({ state }: { state: ResearchState }) {
           </motion.div>
         )}
 
-        {/* ── Report body — Lora + whitepaper sizing ───────────────── */}
+        {/* ── Report body ───────────────────────────────────────────── */}
         {report.length > 0 && (
           <div
             className="report-prose"
             style={{
-              fontSize: "1.125rem",          /* text-lg */
-              lineHeight: 1.75,              /* leading-relaxed */
+              fontSize: "1.125rem",
+              lineHeight: 1.75,
             }}
           >
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={md}>
@@ -232,6 +229,9 @@ export default function ResearchCanvas({ state }: { state: ResearchState }) {
             )}
           </div>
         )}
+
+        {/* ── Analytics Panel (shown after report is complete) ─────── */}
+        <ReportAnalytics state={state} />
 
         {/* ── Error state ──────────────────────────────────────────── */}
         {status === "failed" && error && (

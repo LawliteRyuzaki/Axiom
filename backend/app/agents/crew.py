@@ -82,35 +82,71 @@ async def _stream_phase_logs(queue, session_id, scout_logs, searcher_logs, write
         pass
 
 
+"""
+Upgraded _build_tasks function for crew.py
+-------------------------------------------
+Drop this _build_tasks function into your existing crew.py,
+replacing the old one. Everything else in crew.py stays the same.
+"""
+
+from crewai import Task
+
+
 def _build_tasks(goal: str, scout, searcher, writer):
     scout_task = Task(
         description=(
             f"Research goal: {goal}\n\n"
-            "Decompose into exactly 4-6 targeted search queries covering: "
-            "theory, recent advances, applications, limitations, future directions. "
-            "Return ONLY a numbered list."
+            "Your job is to design the optimal search strategy for this topic. "
+            "Decompose the goal into exactly 5 to 6 highly targeted sub-queries "
+            "covering ALL of these dimensions:\n"
+            "1. Foundational theory and definitions\n"
+            "2. Recent empirical advances (2023-2026)\n"
+            "3. Technical implementation details\n"
+            "4. Real-world applications and case studies\n"
+            "5. Known limitations and open problems\n"
+            "6. Future directions and emerging research\n\n"
+            "Each query must be specific, professionally phrased, and designed "
+            "to surface high-credibility sources. Vary terminology across queries "
+            "to maximise coverage diversity.\n\n"
+            "Return ONLY a clean numbered list. No commentary."
         ),
         expected_output=(
-            "Numbered list of 4-6 precise search queries, one per line. "
-            "Example:\n1. transformer attention mechanism mathematical foundations\n"
-            "2. vision transformer ViT benchmark results 2024\n"
-            "3. transformer scalability limitations training cost"
+            "A numbered list of exactly 5-6 precise, varied search queries. "
+            "Each query on its own line. Example format:\n"
+            "1. transformer self-attention mechanism mathematical foundations 2024\n"
+            "2. vision transformer ViT benchmark ImageNet performance comparison\n"
+            "3. transformer architecture real-world NLP deployment case studies\n"
+            "4. transformer model limitations computational cost scalability problems\n"
+            "5. large language model future directions sparse attention research 2025\n"
+            "6. transformer fine-tuning techniques domain adaptation survey"
         ),
         agent=scout,
     )
 
     searcher_task = Task(
         description=(
-            "Execute each sub-query from the Research Scout. For each query extract "
-            "4-6 high-quality facts with source URLs, prioritising peer-reviewed "
-            "papers and official technical documentation. "
-            "Group findings by query. Mark barren queries [NO DATA]."
+            "Execute EVERY sub-query from the Research Scout's list. "
+            "For each query, search the web and extract 6-8 high-quality findings.\n\n"
+            "For each finding you MUST include:\n"
+            "- A precise factual claim (with specific numbers/dates/percentages)\n"
+            "- The source credibility rating: [HIGH], [MED], or [LOW]\n"
+            "- The exact source URL\n\n"
+            "Source priority: peer-reviewed papers > official docs > established "
+            "tech publications > reputable news > verified technical blogs.\n\n"
+            "NEVER fabricate URLs. If a query returns poor results, mark it "
+            "[INSUFFICIENT DATA] and move on. Group all findings by query number.\n\n"
+            "The quality of the final report depends entirely on the quality "
+            "and specificity of the evidence you gather here."
         ),
         expected_output=(
-            "Structured evidence by query:\n"
-            "**Query N: [text]**\n"
-            "- [Precise finding] — Source: [URL]\n"
-            "Repeat for all queries."
+            "Structured evidence corpus grouped by query:\n\n"
+            "**Query 1: [query text]**\n"
+            "- [Specific finding with statistics/dates] — [HIGH] Source: https://...\n"
+            "- [Another precise finding] — [MED] Source: https://...\n"
+            "(6-8 findings per query)\n\n"
+            "**Query 2: [query text]**\n"
+            "...(repeat for all queries)\n\n"
+            "Minimum 30 total findings across all queries."
         ),
         agent=searcher,
         context=[scout_task],
@@ -119,15 +155,35 @@ def _build_tasks(goal: str, scout, searcher, writer):
     writer_task = Task(
         description=(
             f"Original research goal: {goal}\n\n"
-            "Using ALL evidence from the Web Searcher, produce a publication-quality "
-            "academic report following the strict structure: Abstract, Introduction, "
-            "Technical Deep-Dive (with sub-sections), Empirical Findings, "
-            "Challenges, Future Outlook, Conclusion, References. "
-            "Minimum 900 words. Academic prose only — no emojis, no bullet lists in body."
+            "Using ALL evidence from the Web Searcher's corpus, produce a "
+            "publication-quality research report.\n\n"
+            "MANDATORY STRUCTURE:\n"
+            "# [Specific Descriptive Title]\n"
+            "## Executive Summary (200-250 words)\n"
+            "## 1. Introduction & Background (300+ words)\n"
+            "## 2. Current State of the Field (400+ words, use ### subsections)\n"
+            "## 3. Key Applications & Real-World Impact (300+ words)\n"
+            "## 4. Challenges, Limitations & Open Problems (250+ words)\n"
+            "## 5. Future Outlook & Research Directions (250+ words)\n"
+            "## 6. Conclusion (150-200 words)\n"
+            "## References (minimum 10, numbered, with URLs)\n\n"
+            "QUALITY REQUIREMENTS:\n"
+            "- MINIMUM 1,200 words in body (excluding references)\n"
+            "- Cite every factual claim with [N] inline citations\n"
+            "- Academic prose only — no bullet lists in body sections\n"
+            "- Include at least one comparison or quantitative analysis\n"
+            "- Smooth transitions between all sections\n"
+            "- NO fabricated citations — only use URLs from the evidence corpus\n"
+            "- Write as a senior researcher publishing in a professional journal"
         ),
         expected_output=(
-            "A complete academic Markdown report, 900+ words, following the required "
-            "section structure with inline [N] citations and a numbered References section."
+            "A complete, publication-quality Markdown research report with:\n"
+            "- All 7 required sections (Executive Summary through References)\n"
+            "- Minimum 1,200 words in the body\n"
+            "- Inline [N] citations throughout\n"
+            "- Minimum 10 numbered references with URLs\n"
+            "- Academic prose with no bullet lists in body sections\n"
+            "- Smooth narrative flow from introduction to conclusion"
         ),
         agent=writer,
         context=[scout_task, searcher_task],
