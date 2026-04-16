@@ -7,6 +7,7 @@ import LandingView from "@/components/LandingView";
 import InvestigationSidebar from "@/components/InvestigationSidebar";
 import ResearchCanvas from "@/components/ResearchCanvas";
 import AgentHub from "@/components/AgentHub";
+import HistoryDrawer from "@/components/HistoryDrawer";
 import type { SelectedModel, AppView } from "@/types";
 
 const EASING = [0.22, 1, 0.36, 1] as const;
@@ -14,50 +15,65 @@ const EASING = [0.22, 1, 0.36, 1] as const;
 export default function AxiomApp() {
   const { state, startResearch, loadSession, reset } = useResearch();
 
-  const [view,          setView]          = useState<AppView>("landing");
-  const [historyKey,    setHistoryKey]    = useState(0);
-  const [selectedModel, setSelectedModel] = useState<SelectedModel>("flash");
-  const [sidebarOpen,   setSidebarOpen]   = useState(true);
+  const [view,            setView]            = useState<AppView>("landing");
+  const [historyKey,      setHistoryKey]      = useState(0);
+  const [selectedModel,   setSelectedModel]   = useState<SelectedModel>("flash");
+  const [sidebarOpen,     setSidebarOpen]     = useState(true);
+  // History drawer — visible from landing AND research views
+  const [drawerOpen,      setDrawerOpen]      = useState(false);
 
-  const isRunning = state.status === "running" || state.status === "queued";
-
-  // ── Start new research ─────────────────────────────────────────────────────
+  // ── Start new research ───────────────────────────────────────────────────
   const handleSubmit = useCallback((goal: string, model: SelectedModel) => {
     setView("research");
     setSidebarOpen(true);
+    setDrawerOpen(false);
     startResearch(goal, model);
   }, [startResearch]);
 
-  // ── Reset to landing ───────────────────────────────────────────────────────
+  // ── Reset to landing ─────────────────────────────────────────────────────
   const handleNewSession = useCallback(() => {
     reset();
     setView("landing");
+    setDrawerOpen(false);
     setHistoryKey(k => k + 1);
   }, [reset]);
 
-  // ── Logo click: toggle sidebar on research view; go home on landing ────────
+  // ── Logo click behaviour ──────────────────────────────────────────────────
+  // Landing view  → open/toggle the history drawer
+  // Research view → toggle the left sidebar (existing behaviour)
   const handleLogoClick = useCallback(() => {
     if (view === "research") {
       setSidebarOpen(v => !v);
     } else {
-      handleNewSession();
+      // On landing, logo click opens the history drawer
+      setDrawerOpen(v => !v);
     }
-  }, [view, handleNewSession]);
+  }, [view]);
 
-  // ── Load a past session ────────────────────────────────────────────────────
+  // ── Load a past session (from sidebar OR from the history drawer) ─────────
   const handleSelectSession = useCallback((id: string) => {
+    setDrawerOpen(false);
     setView("research");
     loadSession(id);
   }, [loadSession]);
 
-  // Derive a short session title for the nav
+  // Session title for the nav bar
   const sessionTitle = state.goal
     ? (state.goal.length > 72 ? state.goal.slice(0, 72) + "…" : state.goal)
     : undefined;
 
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      {/* ── Glass nav ──────────────────────────────────────────────────── */}
+
+      {/* ── History drawer — available from any view ─────────────────────── */}
+      <HistoryDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onSelect={handleSelectSession}
+        onNewSession={handleNewSession}
+      />
+
+      {/* ── Glass nav ──────────────────────────────────────────────────────── */}
       <NavBar
         status={state.status}
         onLogoClick={handleLogoClick}
@@ -65,7 +81,7 @@ export default function AxiomApp() {
         showNav={view === "research"}
       />
 
-      {/* ── LANDING ────────────────────────────────────────────────────── */}
+      {/* ── LANDING ────────────────────────────────────────────────────────── */}
       <AnimatePresence mode="wait">
         {view === "landing" && (
           <motion.div
@@ -83,7 +99,7 @@ export default function AxiomApp() {
           </motion.div>
         )}
 
-        {/* ── RESEARCH 3-COLUMN ──────────────────────────────────────── */}
+        {/* ── RESEARCH 3-COLUMN ──────────────────────────────────────────── */}
         {view === "research" && (
           <motion.div
             key="research"
@@ -122,7 +138,7 @@ export default function AxiomApp() {
               <ResearchCanvas state={state} />
             </motion.div>
 
-            {/* Right agent hub — slides in from right */}
+            {/* Right agent hub */}
             <motion.div
               initial={{ x: 300, opacity: 0 }}
               animate={{ x: 0,   opacity: 1 }}
