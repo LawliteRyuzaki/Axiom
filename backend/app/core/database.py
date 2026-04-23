@@ -28,9 +28,9 @@ async def connect_db() -> None:
             "created_at", expireAfterSeconds=86400  # 24h TTL on cache
         )
 
-        logger.info("✅ MongoDB connected — db: %s", settings.mongodb_db_name)
+        logger.info(" MongoDB connected — db: %s", settings.mongodb_db_name)
     except Exception as exc:
-        logger.error("❌ MongoDB connection failed: %s", exc)
+        logger.error(" MongoDB connection failed: %s", exc)
         raise
 
 

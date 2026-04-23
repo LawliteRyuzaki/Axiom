@@ -19,7 +19,7 @@ from app.api.research import router as research_router
 async def lifespan(app: FastAPI):
     settings = get_settings()
     env_label = "production" if settings.is_production else "development"
-    logger.info("🚀 Axiom v%s starting (%s)...", settings.app_version, env_label)
+    logger.info(" Axiom v%s starting (%s)...", settings.app_version, env_label)
     logger.info("Allowed CORS origins: %s", settings.origins_list)
 
     # Log available fallback providers so operators can verify config at boot
