@@ -1,136 +1,95 @@
-# ScholarSync — Project Bible & Progress Tracker
+# Axiom v4 — Project Bible & Protocol
 
 ## Project Overview
-**ScholarSync** is a real-time AI Agentic System for MCA students.
-A user enters a research goal; a multi-agent CrewAI "crew" searches the web and generates a structured report, streamed live to the browser via SSE.
+**Axiom v4** is a production-grade, deterministic AI Research Engine. It transforms fuzzy agentic flows into a rigid, fault-tolerant research pipeline that guarantees factual integrity and high-fidelity technical analysis.
 
 ---
 
-## Architecture
+## Architecture (Axiom v4)
 ```
-Browser → Next.js (App Router) → FastAPI → CrewAI Crew → Gemini Flash + Serper
-                                     ↓
-                               MongoDB Atlas (session/history store)
+Browser → Next.js (Tailwind 4) → FastAPI (SSE) → Deterministic Pipeline → Multi-Agent Crew
+                                      ↓
+                                MongoDB Atlas (Persistence) + Multi-Vector Retrieval
 ```
 
 ## Tech Stack
-| Layer | Technology | Version | Cost |
+| Layer | Technology | Version | Role |
 |---|---|---|---|
-| Frontend | Next.js (App Router) | 14.x | Free |
-| Styling | Tailwind CSS | 3.x | Free |
-| Backend | FastAPI + Uvicorn | 0.109.x | Free |
-| AI Orchestration | CrewAI | 0.28.x | Free (OSS) |
-| LLM | Gemini 2.0 Flash (Google AI Studio) | gemini-2.0-flash | Free tier |
-| Web Search | Serper.dev | - | Free (2,500 req/mo) |
-| Database | MongoDB Atlas M0 | - | Free forever |
-| Frontend Host | Vercel | - | Free hobby |
-| Backend Host | Render / Railway | - | Free tier |
+| **Frontend** | Next.js 16 (App Router) | 16.2.x | High-performance React UI |
+| **Styling** | Tailwind CSS 4 | 4.x | Design System & Visuals |
+| **Backend** | FastAPI | 0.111.x | Async API & SSE Streaming |
+| **Orchestration** | CrewAI | 1.14.x | Multi-Agent Execution |
+| **Pipeline** | Axiom v4 Controller | - | Deterministic Stage Enforcement |
+| **Retrieval** | Multi-Vector Engine | - | Robust Academic + Web + PDF Search |
+| **LLM Chain** | Gemini 2.0 → Groq | - | Fault-Tolerant Provider Fallback |
 
 ---
 
-## Coding Standards
+## 🛠️ Commands & Protocols
 
-### Python (Backend)
-- Formatter: `black` with line length 88
-- Linter: `ruff`
-- Type hints: mandatory on all function signatures
-- Async: use `async def` for all route handlers
-- Errors: never swallow exceptions silently — log then raise/return structured error
-- Env: all secrets via `python-dotenv` — NEVER hardcode credentials
+### Backend (Python 3.10+)
+- **Start Dev**: `python run.py`
+- **Install Deps**: `pip install -r requirements.txt`
+- **CORS Config**: Update `ALLOWED_ORIGINS` in `.env`
+- **Logging**: Level controlled via `LOG_LEVEL` (default: INFO)
 
-### TypeScript (Frontend)
-- Strict mode: enabled
-- Components: functional only, no class components
-- Fetching: native `fetch` with `EventSource` for SSE
-- State: React `useState` + `useReducer` for complex state
-- Styling: Tailwind utility classes only
-
-### Git Conventions
-- Branch: `main` (production), `dev` (active development)
-- Commits: `feat:`, `fix:`, `chore:`, `docs:` prefixes
-- Never commit `.env` files
+### Frontend (Node 20+)
+- **Start Dev**: `npm run dev` (Turbo enabled)
+- **Memory Fix**: `$env:NODE_OPTIONS="--max-old-space-size=4096"` (for Windows)
+- **API URL**: Set `NEXT_PUBLIC_API_URL` in `.env.local`
 
 ---
 
-## Agent Roles
+## 🧠 Axiom v4 Protocol
 
-| Agent | Role | Tools |
-|---|---|---|
-| Research Scout | Decomposes research goal into 3-5 targeted sub-queries | None (LLM reasoning only) |
-| Web Searcher | Executes each sub-query via Serper, extracts key facts | SerperDevTool |
-| Report Writer | Synthesizes all findings into structured Markdown report | None (LLM synthesis) |
+### 1. Deterministic Execution Stage
+Pipeline MUST follow: **Architect → Scout → Searcher/Curator → Reviewer → Writer**.
+No stages can be skipped. The pipeline enforces a "Data Guard" before synthesis.
 
----
+### 2. Retrieval Protocol (Robustness)
+Search MUST attempt 3 tiers:
+- **Tier 1**: High-fidelity Academic + Web.
+- **Tier 2**: Simplified Natural Language (if Tier 1 recall < 3).
+- **Tier 3**: Keyword-only extraction (Final fallback).
 
-## Timeout Strategy (3-layer)
-1. Per-tool call: **15 seconds**
-2. Per-agent task: **45 seconds**
-3. Per-crew run: **120 seconds**
-
-On timeout: return partial results with a `partial: true` flag. Never hard 500.
-
----
-
-## API Endpoints
-| Method | Path | Description |
-|---|---|---|
-| POST | `/api/research` | Start a new research job (returns SSE stream) |
-| GET | `/api/history` | List past research sessions |
-| GET | `/api/history/{id}` | Get a specific session's report |
-| GET | `/api/health` | Health check |
+### 3. Truth Verification
+- Every source MUST pass `AxiomBatchVerifierTool`.
+- Confidence Scores: `HIGH` (Score > 0.8), `MEDIUM` (Score > 0.6), `LOW` (Reject).
+- The Reviewer is physically blocked from synthesis if `Coverage < 10%`.
 
 ---
 
-## Progress Tracker
-
-### Phase 1 — Backend ✅ IN PROGRESS
-- [x] Project scaffold
-- [x] CLAUDE.md
-- [x] FastAPI app shell
-- [x] MongoDB connection
-- [x] CrewAI agents (Scout, Searcher, Writer)
-- [x] SSE streaming endpoint
-- [x] Timeout handling
-- [x] History endpoints
-
-### Phase 2 — Frontend ⬜ TODO
-- [ ] Next.js scaffold
-- [ ] Research goal input form
-- [ ] Real-time SSE progress component
-- [ ] Report markdown renderer
-- [ ] History sidebar
-- [ ] Error/timeout states
-
-### Phase 3 — Integration & Deploy ⬜ TODO
-- [ ] CORS config
-- [ ] Environment validation on startup
-- [ ] Vercel deployment config
-- [ ] Render deployment config (backend)
-- [ ] End-to-end smoke test
-
----
-
-## Environment Variables
-
-### Backend (`backend/.env`)
-```
-GEMINI_API_KEY=...
-SERPER_API_KEY=...
-MONGODB_URI=...
-ALLOWED_ORIGINS=http://localhost:3000
-```
-
-### Frontend (`frontend/.env.local`)
-```
-NEXT_PUBLIC_API_URL=http://localhost:8000
+## 📂 Project Structure
+```text
+backend/
+├── app/
+│   ├── agents/      # CrewAI Agent & Task definitions
+│   ├── pipeline/    # Axiom v4 Controller & State Management
+│   ├── retrieval/   # Robust Search Engine & Fallback logic
+│   ├── verification/# Hard Content Validation & Scoring
+│   ├── memory/      # Thread-safe Context & Caching
+│   └── main.py      # API Entry point
+frontend/
+├── components/      # Glassmorphic UI & Canvas
+└── hooks/           # SSE & Research State management
 ```
 
 ---
 
-## Known Constraints & Mitigations
-| Constraint | Mitigation |
-|---|---|
-| Gemini free tier: 15 RPM | Queue requests; surface rate-limit errors gracefully |
-| Serper free tier: 2,500/mo | Cache search results in MongoDB by query hash |
-| Render free tier sleeps after 15min | Show "warming up..." UI state on first request |
-| CrewAI agent timeouts | 3-layer timeout with partial result fallback |
+## 📋 Progress Tracker (Axiom v4)
+- [x] **Core Refactor**: Deterministic Pipeline Controller
+- [x] **Retrieval**: Multi-strategy fallback engine
+- [x] **Truth Engine**: Parallel Batch Verification Tool
+- [x] **Memory**: Thread-safe ResearchContext injection
+- [x] **Fallbacks**: Gemini-to-Groq provider rotation
+- [x] **Production**: SSE streaming headers & deployment configs
+- [ ] **Next**: Real-time visualization of the research graph
+
+---
+
+## 🔒 Security & Deployment
+- **CORS**: `ALLOWED_ORIGINS` must match the frontend production URL.
+- **SSE**: `X-Accel-Buffering: no` is mandatory for Nginx/Render environments.
+- **Keys**: NEVER commit `.env`. Use GitHub Secrets for Render/Vercel.
+
+**Axiom v4: Built for Truth. Optimized for Reliability.**
