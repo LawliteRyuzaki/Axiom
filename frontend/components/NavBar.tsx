@@ -79,14 +79,17 @@ export default function NavBar({ status, onLogoClick, onHubClick, sessionTitle, 
         }}
       >
         <AxiomLogo size={24} />
-        <span style={{
-          fontFamily:    "var(--font-ui)",
-          fontWeight:    800,
-          fontSize:      "1.125rem",
-          color:         "var(--text-primary)",
-          letterSpacing: "-0.04em",
-          lineHeight:    1,
-        }}>
+        <span 
+          className="nav-logo-text"
+          style={{
+            fontFamily:    "var(--font-ui)",
+            fontWeight:    800,
+            fontSize:      "1.125rem",
+            color:         "var(--text-primary)",
+            letterSpacing: "-0.04em",
+            lineHeight:    1,
+          }}
+        >
           Axiom <span style={{ color: "var(--accent)", fontSize: "0.75rem", verticalAlign: "top", marginLeft: 1 }}>v4</span>
         </span>
       </button>
@@ -102,17 +105,20 @@ export default function NavBar({ status, onLogoClick, onHubClick, sessionTitle, 
       )}
 
       {showNav && sessionTitle && (
-        <span style={{
-          fontFamily: "var(--font-ui)",
-          fontSize: "0.875rem",
-          fontWeight: 500,
-          color: "var(--text-secondary)",
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          marginRight: 12,
-          flexShrink: 1,
-        }}>
+        <span 
+          className="nav-session-title"
+          style={{
+            fontFamily: "var(--font-ui)",
+            fontSize: "0.875rem",
+            fontWeight: 500,
+            color: "var(--text-secondary)",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            marginRight: 12,
+            flexShrink: 1,
+          }}
+        >
           {sessionTitle}
         </span>
       )}
@@ -140,14 +146,17 @@ export default function NavBar({ status, onLogoClick, onHubClick, sessionTitle, 
               animation: (status === "running" || status === "queued")
                 ? "soft-pulse 1.4s ease infinite" : "none",
             }} />
-            <span style={{
-              fontFamily:    "var(--font-mono)",
-              fontSize:      "0.625rem",
-              fontWeight:    400,
-              color:         "var(--text-muted)",
-              textTransform: "uppercase",
-              letterSpacing: "0.09em",
-            }}>
+            <span 
+              className="nav-status-label"
+              style={{
+                fontFamily:    "var(--font-mono)",
+                fontSize:      "0.625rem",
+                fontWeight:    400,
+                color:         "var(--text-muted)",
+                textTransform: "uppercase",
+                letterSpacing: "0.09em",
+              }}
+            >
               {s.label}
             </span>
           </div>

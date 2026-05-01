@@ -352,7 +352,7 @@ export default function ResearchCanvas({ state }: { state: ResearchState }) {
 
   return (
     <div className="canvas-scroll">
-      <div style={{ maxWidth: "48rem", margin: "0 auto", padding: "0 2.5rem" }}>
+      <div className="canvas-inner">
 
         {/* ── Queued State ─────────────────────────────────────────── */}
         <AnimatePresence>
@@ -440,7 +440,7 @@ export default function ResearchCanvas({ state }: { state: ResearchState }) {
           </motion.div>
         )}
 
-        <div ref={endRef} style={{ height: "4rem" }} />
+        <div ref={endRef} style={{ height: "8rem" }} />
       </div>
     </div>
   );

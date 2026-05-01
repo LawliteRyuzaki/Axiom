@@ -102,6 +102,7 @@ export default function AxiomApp() {
               onSubmit={handleSubmit}
               selectedModel={selectedModel}
               onModelChange={setSelectedModel}
+              onMenuClick={handleLogoClick}
             />
           </motion.div>
         )}

@@ -1,0 +1,421 @@
+@import "tailwindcss";
+
+/* REBUILD_CACHELINE_2026_05_01_2355 */
+
+/*
+ * AXIOM — Design System v4
+ * ─────────────────────────────────────────────────────────────────────────
+ * Theme:    Premium research platform.
+ */
+
+:root {
+  color-scheme: light;
+  --bg: #FAFAFA;
+  --surface: #FFFFFF;
+  --sidebar-bg: #F5F5F5;
+  --text-primary: #0F1117;
+  --text-secondary: #4B5563;
+  --text-muted: #6B7280;
+  --accent: #3B82F6;
+  --border: #E2E8F0;
+  --border-med: #CBD5E1;
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-blur: blur(16px) saturate(180%);
+  --font-ui: 'Inter', sans-serif;
+  --font-hero: 'Outfit', sans-serif;
+  --font-report: 'Lora', serif;
+  --font-mono: 'Geist Mono', monospace;
+  --radius: 12px;
+  --radius-xl: 24px;
+}
+
+.dark {
+  color-scheme: dark;
+  --bg: #050505;
+  --surface: #0D0D0D;
+  --sidebar-bg: #0A0A0A;
+  --text-primary: #F5F5F7;
+  --text-secondary: #A1A1AA;
+  --border: #18181B;
+  --border-med: #27272A;
+  --glass-bg: rgba(10, 10, 10, 0.85);
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  line-height: 1.6;
+  overflow: hidden;
+}
+
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+.landing-wrap {
+  width: 100%;
+  height: calc(100vh - 52px);
+  overflow-y: auto;
+  background-image: radial-gradient(rgba(0,0,0,0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.landing-content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 4rem 0;
+  min-height: 100%;
+}
+
+/* ── Hero ───────────────────────────────────────────────────────────────── */
+.research-hero-text {
+  font-family: 'Lora', serif;
+  font-size: clamp(3rem, 8vw, 4.5rem);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.0;
+  margin-bottom: 2rem;
+  text-align: center;
+  color: var(--text-primary);
+  position: relative;
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+.research-hero-text::after,
+.research-hero-text::before {
+  content: none !important;
+  display: none !important;
+}
+
+.hero-heading {
+  display: none;
+}
+
+.hero-motion-div {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+
+.landing-inner-wrap {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 0 2rem;
+}
+
+/* ── Search Bar (Desktop) ────────────────────────────────────────────────── */
+.search-motion-div {
+  width: 90%;
+  max-width: 660px;
+  position: relative;
+  z-index: 2;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border-med);
+  border-radius: 4px;
+  min-height: 54px;
+  width: 100%;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  transition: all 0.2s ease;
+}
+
+.dark .search-bar {
+  background: #111;
+  border: 1px solid #222;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.search-bar:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.bar-lead-icon { display: none; }
+
+.search-bar textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 14px 20px;
+  font-size: 0.9375rem;
+  resize: none;
+  line-height: 24px;
+  overflow: hidden; /* Prevent "mysterious bar" scrollbar */
+}
+
+.bar-actions {
+  display: flex;
+  align-items: center;
+  padding-right: 12px;
+  gap: 8px;
+}
+
+.mobile-header {
+  display: none;
+}
+
+.bar-btn {
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  background: var(--surface);
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 70px;
+  justify-content: center;
+}
+
+.bar-submit-circular {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--text-primary);
+  color: #fff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.bar-submit-circular:hover {
+  background: var(--accent);
+}
+
+/* ── Mobile Optimization (Claude Clone) ─────────────────────────────────── */
+@media (max-width: 768px) {
+  .landing-wrap {
+    padding: 0 !important;
+    background-image: none !important; /* Cleaner dark/solid feel */
+  }
+
+  .landing-inner-wrap {
+    padding: 0 !important;
+  }
+
+  .mobile-header {
+    display: flex !important;
+    width: 100%;
+    height: 64px;
+    padding: 0 16px;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    background: var(--bg);
+  }
+
+  .nav-bar, .glass-nav {
+    display: none !important;
+  }
+
+  .header-icon-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    border: none !important;
+  }
+
+  .model-selector-text {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 1.05rem;
+    font-weight: 550;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+  }
+
+  /* Hero Section */
+  .hero-motion-div {
+    margin-top: 30vh !important;
+    margin-bottom: auto !important;
+    text-align: center;
+    padding: 0 2rem;
+    width: 100%;
+  }
+
+  .hero-icon-wrap {
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: center;
+  }
+
+  .research-hero-text {
+    font-family: 'Lora', serif !important;
+    font-size: 2.2rem !important;
+    font-weight: 500 !important;
+    line-height: 1.2 !important;
+    margin-top: 0 !important;
+    margin-bottom: 3rem !important;
+    text-align: center;
+    text-shadow: none !important;
+    background: none !important;
+    -webkit-text-fill-color: var(--text-primary) !important;
+    color: var(--text-primary) !important;
+  }
+
+  /* Chips */
+  .chip-container {
+    margin-bottom: 100px !important; /* Spacing for the fixed search bar */
+    padding: 0 1rem !important;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    gap: 8px !important;
+  }
+
+  .chip {
+    padding: 10px 18px !important;
+    border-radius: 20px !important;
+    font-size: 0.9rem !important;
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+  }
+
+  /* Search Area */
+  .search-motion-div {
+    width: 100% !important;
+    padding: 0 12px 12px 12px !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    z-index: 1000;
+    background: linear-gradient(transparent, var(--bg) 30%);
+  }
+
+  .search-bar {
+    border-radius: 28px !important;
+    background: #ffffff !important; /* Solid white for light mode */
+    border: 1px solid #e2e8f0 !important;
+    padding: 6px 6px 6px 18px !important;
+    min-height: 58px !important;
+    width: 100% !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.08) !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  .dark .search-bar {
+    background: #161616 !important; /* Solid dark for dark mode */
+    border: 1px solid #27272a !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
+  }
+
+  .bar-lead-icon {
+    display: flex !important;
+    color: #64748b !important;
+    padding-right: 12px;
+  }
+
+  .search-bar textarea {
+    padding: 14px 0 !important;
+    font-size: 1.1rem !important;
+    height: 52px !important;
+    background: transparent !important;
+    color: #000000 !important; /* Default dark text */
+  }
+
+  .dark .search-bar textarea {
+    color: #ffffff !important; /* White text in dark mode */
+  }
+
+  .bar-submit-circular {
+    width: 44px !important;
+    height: 44px !important;
+    background: #000000 !important; /* Dark button in light mode */
+    color: #ffffff !important;
+  }
+
+  .dark .bar-submit-circular {
+    background: #ffffff !important; /* White button in dark mode */
+    color: #000000 !important;
+  }
+
+  .hero-subheading, .nav-logo-text, .mobile-footer-text, .desktop-model-btn, .bar-btn {
+    display: none !important;
+  }
+}
+
+/* ── UI Components ──────────────────────────────────────────────────────── */
+.chip {
+  padding: 10px 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  color: var(--text-secondary);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.chip:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--text-primary);
+  transform: translateY(-2px) scale(1.02);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  min-height: 54px;
+  width: 100%;
+  padding: 4px 6px 4px 18px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+  transition: all 0.2s ease;
+}
+
+.search-bar:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+}
+
+.glass-nav {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--border);
+  height: 52px;
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+}
