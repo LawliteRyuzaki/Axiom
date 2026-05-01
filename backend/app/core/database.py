@@ -7,6 +7,8 @@ _client: Optional[AsyncIOMotorClient] = None
 _db: Optional[AsyncIOMotorDatabase] = None
 
 
+import certifi
+
 async def connect_db() -> None:
     global _client, _db
     settings = get_settings()
@@ -15,6 +17,7 @@ async def connect_db() -> None:
             settings.mongodb_uri,
             serverSelectionTimeoutMS=5000,
             connectTimeoutMS=5000,
+            tlsCAFile=certifi.where()
         )
         # Verify the connection is alive
         await _client.admin.command("ping")
