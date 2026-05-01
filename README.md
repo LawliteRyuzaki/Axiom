@@ -1,62 +1,68 @@
 # Axiom
 
-**Deep Research. Verified Sources. Live Reports.**
+Axiom is a high-fidelity research engine designed for deterministic, multi-agent analysis and real-time source verification. It leverages a structured orchestration pipeline to transform complex research goals into comprehensive, evidence-based reports.
 
-Axiom is a research engine that uses AI agents to perform multi-phase analysis on any topic. It doesn't just summarize; it searches for real evidence, verifies sources, and builds a comprehensive report with actual citations.
+## Methodology
 
----
+Axiom operates on the v4 Research Core, which utilizes a rigid, four-phase pipeline to ensure factual integrity and minimize hallucination:
 
-## How it Works
+1.  **Orchestrated Planning**: The system decomposes research objectives into a hierarchical set of investigation tasks.
+2.  **Autonomous Retrieval**: Agents execute parallel queries across academic databases, technical reports, and the open web.
+3.  **Heuristic Verification**: Every retrieved source is processed through a verification engine that checks for technical relevance and source credibility.
+4.  **Evidence Synthesis**: A final report is synthesized exclusively from verified data points, complete with direct citations and confidence scoring.
 
-Axiom uses a structured pipeline to ensure the reports are accurate and grounded in data:
+## Key Features
 
-1.  **Planning**: The system creates a research roadmap based on your goal.
-2.  **Searching**: Agents generate targeted queries to find the best sources (Academic, Web, and Reports).
-3.  **Verification**: Every source is checked for technical accuracy before being used.
-4.  **Synthesis**: A final report is written using only the verified evidence.
+- **Multi-Agent Orchestration**: Powered by CrewAI, the system coordinates specialized agents for search, verification, and synthesis.
+- **Real-Time Streaming**: Utilizing Server-Sent Events (SSE), research progress and agent internal thoughts are streamed to the interface as they happen.
+- **Weighted Scoring Engine**: Sources are ranked and filtered based on a multi-dimensional scoring algorithm (relevance, authority, and recency).
+- **Session Persistence**: Complete research sessions are persisted to MongoDB, allowing for historical review and iterative analysis.
+- **Export Capabilities**: Finalized manuscripts can be exported to PDF format for professional distribution.
 
----
+## Technical Stack
 
----
+### Backend
+- **Framework**: FastAPI (Python 3.10+)
+- **Agent Framework**: CrewAI 1.14.x
+- **Database**: MongoDB (via Motor/Pymongo)
+- **Primary LLM**: Google Gemini (Flash/Pro)
+- **Fallback Chain**: Groq (Llama 3.1)
+- **Deployment**: Configured for Render.com
 
-## 🏗️ Architecture
-Axiom is built for speed and reliability, using parallel search and automated verification to keep hallucinations to a minimum.
+### Frontend
+- **Framework**: Next.js (React 19)
+- **Styling**: Tailwind CSS 4
+- **Animation**: Framer Motion
+- **Data Visualization**: Recharts
+- **Deployment**: Configured for Vercel
 
-*   **Parallel Search**: Searches across multiple sources simultaneously to save time.
-*   **Verification Engine**: Checks the content of URLs to make sure they actually support the claims.
-*   **Ranking**: Sources are ranked by relevance and credibility.
-*   **Caching**: Results are cached to speed up repeat queries.
+## Configuration
 
----
+The system requires several environment variables for full operation.
 
-## ⚡ Tech Stack
+### Backend (.env)
+- `GEMINI_API_KEY`: Primary inference key.
+- `SERPER_API_KEY`: Web search capabilities.
+- `MONGODB_URI`: Atlas or local MongoDB connection string.
+- `GROQ_API_KEY`: (Optional) Fallback inference provider.
 
-- **Frontend**: Next.js 16, Tailwind CSS, Framer Motion
-- **Backend**: FastAPI (Python)
-- **Agents**: CrewAI
-- **Database**: MongoDB Atlas
-- **Search**: Serper API
+### Frontend (.env.local)
+- `NEXT_PUBLIC_API_URL`: URL of the running Axiom backend.
 
----
+## Local Setup
 
-## 🚀 Quick Start
+### Backend
+1. Navigate to the backend directory.
+2. Install dependencies: `pip install -r requirements.txt`.
+3. Configure the `.env` file with required keys.
+4. Start the server: `python run.py`.
 
-### 1. Backend
-```bash
-cd backend
-pip install -r requirements.txt
-python run.py
-```
+### Frontend
+1. Navigate to the frontend directory.
+2. Install dependencies: `npm install`.
+3. Configure the `.env.local` file.
+4. Start the development server: `npm run dev`.
 
-### 2. Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
+## License
 
----
-
----
-
-Built with Axiom v4 core. MIT License.
+MIT License. Developed as part of the Axiom Research Initiative.
