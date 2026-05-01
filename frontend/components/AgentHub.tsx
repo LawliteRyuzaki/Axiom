@@ -40,12 +40,9 @@ export default function AgentHub({ state }: { state: ResearchState }) {
 
   return (
     <aside className="hub-panel">
-      {/* ── Header — height aligned with InvestigationSidebar header ─── */}
-      {/* InvestigationSidebar header is ~52px (button 36 + padding 8+8).
-          We match that with padding + explicit min-height. */}
       <div style={{
         padding: "0 14px",
-        minHeight: 52,           // ← matches sidebar header height
+        minHeight: 52,
         borderBottom: "1px solid var(--border)",
         display: "flex",
         alignItems: "center",
@@ -61,66 +58,69 @@ export default function AgentHub({ state }: { state: ResearchState }) {
           textTransform: "uppercase",
           letterSpacing: "0.08em",
         }}>
-          Agent Log
+          Runtime Intelligence
         </span>
         <span style={{
           fontFamily: "var(--font-mono)",
           fontSize: "0.6rem",
-          color: cfg?.color ?? "#888",   // ← optional chaining safety
+          color: cfg?.color ?? "#888",
           letterSpacing: "0.07em",
+          display: "flex",
+          alignItems: "center",
+          gap: "6px"
         }}>
+          {status === "running" && <span className="pulse-dot" />}
           {cfg?.label ?? "IDLE"}
         </span>
       </div>
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        {/* macOS-style titlebar */}
         <div style={{
-          background: "#161B22",
+          background: "#080808",
           padding: "7px 12px",
           display: "flex",
           alignItems: "center",
           gap: 5,
           flexShrink: 0,
-          borderBottom: "1px solid #21262D",
+          borderBottom: "1px solid var(--border)",
         }}>
-          {["#FF5F57", "#FFBD2E", "#28C840"].map(c => (
+          {["#EF4444", "#F59E0B", "#10B981"].map(c => (
             <span key={c} style={{
               width: 8,
               height: 8,
               borderRadius: "50%",
               background: c,
               flexShrink: 0,
+              opacity: 0.8
             }} />
           ))}
           <span style={{
             marginLeft: 8,
             fontFamily: "var(--font-mono)",
             fontSize: "0.6rem",
-            color: "#484F58",
+            color: "var(--text-faint)",
             letterSpacing: "0.06em",
           }}>
-            axiom-runtime
+            axiom-sh v2.0
           </span>
         </div>
 
-        {/* ── Log stream ──────────────────────────────────────────────── */}
-        <div className="terminal">
+        <div className="terminal" style={{ background: "var(--term-bg)" }}>
           <div className="log-dim" style={{ marginBottom: 8 }}>
-            $ axiom run --session {sessionId?.slice(0, 8) ?? "--------"}
+            ◈ Initializing recursive session: {sessionId?.slice(0, 8) ?? "--------"}
           </div>
 
           <AnimatePresence initial={false}>
             {logs.map(entry => (
               <motion.div
                 key={entry.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.12 }}
+                initial={{ opacity: 0, x: -2 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.1 }}
                 className={logCls(entry.level)}
                 style={{ display: "flex", gap: 10, lineHeight: 1.7 }}
               >
-                <span className="log-dim" style={{ flexShrink: 0, userSelect: "none" }}>
+                <span className="log-dim" style={{ flexShrink: 0, userSelect: "none", fontSize: "0.55rem" }}>
                   {entry.timestamp}
                 </span>
                 <span style={{ wordBreak: "break-word" }}>{entry.text}</span>
@@ -130,14 +130,8 @@ export default function AgentHub({ state }: { state: ResearchState }) {
 
           {isRunning && (
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 5 }}>
-              <span className="log-dim">$</span>
-              <span style={{
-                display: "inline-block",
-                width: 6,
-                height: 13,
-                background: "var(--term-green)",
-                animation: "blink 1s linear infinite",
-              }} />
+              <span className="log-dim">◈</span>
+              <span className="streaming-cursor" style={{ height: 10, width: 6 }} />
             </div>
           )}
 
@@ -146,35 +140,33 @@ export default function AgentHub({ state }: { state: ResearchState }) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
-              style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid #21262D" }}
+              style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid var(--border)" }}
             >
-              <div className="log-success">Process complete.</div>
-              {model    && <div className="log-dim">Model: {model}</div>}
-              {duration && <div className="log-dim">Elapsed: {duration}s</div>}
-              {partial  && <div className="log-warn">Partial result — timeout reached.</div>}
+              <div className="log-success">Research finalized.</div>
+              {model    && <div className="log-dim">Engine: {model}</div>}
+              {duration && <div className="log-dim">Duration: {duration}s</div>}
             </motion.div>
           )}
 
           <div ref={endRef} />
         </div>
 
-        {/* ── Sub-queries ─────────────────────────────────────────────── */}
         {queries.length > 0 && (
           <div style={{
-            borderTop: "1px solid #21262D",
-            background: "#0D1117",
+            borderTop: "1px solid var(--border)",
+            background: "var(--sidebar-bg)",
             padding: "10px 12px",
             flexShrink: 0,
           }}>
             <p style={{
               fontFamily: "var(--font-mono)",
               fontSize: "0.6rem",
-              color: "#484F58",
+              color: "var(--text-muted)",
               textTransform: "uppercase",
               letterSpacing: "0.1em",
               marginBottom: 8,
             }}>
-              Search queries
+              Search Vectors
             </p>
             <div style={{
               maxHeight: 110,
@@ -202,7 +194,7 @@ export default function AgentHub({ state }: { state: ResearchState }) {
                   <span style={{
                     fontFamily: "var(--font-mono)",
                     fontSize: "0.6rem",
-                    color: "var(--term-text)",
+                    color: "var(--text-secondary)",
                     lineHeight: 1.55,
                     wordBreak: "break-word",
                   }}>
@@ -215,7 +207,6 @@ export default function AgentHub({ state }: { state: ResearchState }) {
         )}
       </div>
 
-      {/* ── Footer ──────────────────────────────────────────────────────── */}
       <div style={{
         padding: "8px 14px",
         borderTop: "1px solid var(--border)",
@@ -229,14 +220,14 @@ export default function AgentHub({ state }: { state: ResearchState }) {
           fontSize: "0.6rem",
           color: "var(--text-faint)",
         }}>
-          {logs.length} events
+          {logs.length} signals
         </span>
         <span style={{
           fontFamily: "var(--font-mono)",
           fontSize: "0.6rem",
           color: "var(--text-faint)",
         }}>
-          {model ?? "gemini-2.0-flash"}
+          {sessionId?.slice(0, 8) ?? "idle"}
         </span>
       </div>
     </aside>

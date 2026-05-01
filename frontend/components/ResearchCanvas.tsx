@@ -61,7 +61,6 @@ async function exportToPDF(
   goal: string,
   sessionId: string | null
 ): Promise<void> {
-  // Dynamically import jsPDF to avoid SSR issues
   const { default: jsPDF } = await import("jspdf");
 
   const doc = new jsPDF({
@@ -72,263 +71,183 @@ async function exportToPDF(
 
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 20;
+  const margin = 24; // Balanced professional margins
   const contentWidth = pageWidth - margin * 2;
   let y = margin;
 
-  // ── Helper: add text with word-wrap and page breaks ─────────────────────────
+  const BRAND_BLUE: [number, number, number] = [59, 130, 246];
+  const BODY_TEXT: [number, number, number] = [39, 39, 42];
+  const MUTED_TEXT: [number, number, number] = [113, 113, 122];
+  const PAPER_WHITE: [number, number, number] = [252, 252, 253]; // Subtle off-white for premium feel
+
+  const addPageTint = () => {
+    doc.setFillColor(...PAPER_WHITE);
+    doc.rect(0, 0, pageWidth, pageHeight, "F");
+  };
+
+  const addHeader = (pageNum: number) => {
+    doc.setDrawColor(228, 228, 231);
+    doc.setLineWidth(0.1);
+    doc.line(margin, 15, pageWidth - margin, 15);
+  };
+
+  const addFooter = (pageNum: number) => {
+    doc.setDrawColor(228, 228, 231);
+    doc.setLineWidth(0.1);
+    doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...MUTED_TEXT);
+    doc.text(`${pageNum}`, pageWidth - margin, pageHeight - 10, { align: "right" });
+  };
+
+  const checkSpace = (needed: number) => {
+    if (y + needed > pageHeight - 18) { // Even tighter bottom margin
+      addFooter(doc.getCurrentPageInfo().pageNumber);
+      doc.addPage();
+      addPageTint();
+      y = 22; // Start higher on new pages
+      addHeader(doc.getCurrentPageInfo().pageNumber);
+      return true;
+    }
+    return false;
+  };
+
+  const addSpacing = (mm: number) => {
+    if (y + mm > pageHeight - 18) {
+      checkSpace(mm);
+    } else {
+      y += mm;
+    }
+  };
+
   const addWrappedText = (
     text: string,
     fontSize: number,
     fontStyle: "normal" | "bold" | "italic",
     color: [number, number, number],
-    lineHeightFactor: number = 1.5,
-    indent: number = 0
+    lineHeightFactor: number = 1.6, // Tighter line height
+    fontFamily: string = "times",
+    align: "left" | "center" | "right" | "justify" = "justify"
   ): void => {
+    doc.setFont(fontFamily, fontStyle);
     doc.setFontSize(fontSize);
-    doc.setFont("helvetica", fontStyle);
-    doc.setTextColor(...color);
+    doc.setTextColor(color[0], color[1], color[2]);
 
-    const lines = doc.splitTextToSize(text, contentWidth - indent);
-    const lineH = (fontSize * lineHeightFactor) / 2.83; // pt to mm approx
+    const lines = doc.splitTextToSize(text, contentWidth);
+    const lineH = (fontSize * lineHeightFactor) / 2.83;
 
-    for (const line of lines) {
-      if (y + lineH > pageHeight - margin) {
-        doc.addPage();
-        y = margin;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const isSecondToLast = i === lines.length - 2;
+      const spaceNeeded = isSecondToLast ? (lineH * 2) : lineH;
+
+      if (checkSpace(spaceNeeded)) {
+        doc.setFont(fontFamily, fontStyle);
+        doc.setFontSize(fontSize);
+        doc.setTextColor(color[0], color[1], color[2]);
       }
-      doc.text(line, margin + indent, y);
+
+      const isLastLine = i === lines.length - 1;
+      doc.text(line, margin, y, { 
+        maxWidth: contentWidth,
+        align: (align === "justify" && isLastLine) ? "left" : align 
+      });
+
+      // Detect URLs in the line and add clickable links
+      const urlMatches = line.match(/https?:\/\/[^\s)]+/g);
+      if (urlMatches) {
+        urlMatches.forEach((url: string) => {
+          // Simplistic link overlay for the whole line if it contains a URL
+          // In academic reports, URLs often occupy their own lines in references
+          doc.link(margin, y - fontSize/2.83, contentWidth, lineH, { url });
+        });
+      }
+
       y += lineH;
     }
   };
 
-  const addSpacing = (mm: number) => {
-    y += mm;
-    if (y > pageHeight - margin) {
-      doc.addPage();
-      y = margin;
-    }
-  };
+  // ── Cover ──────────────────────────────────────────────────────────
+  doc.setFillColor(5, 5, 5);
+  doc.rect(0, 0, pageWidth, pageHeight, "F");
+  
+  doc.setFillColor(...BRAND_BLUE);
+  doc.rect(0, 0, pageWidth, 5, "F");
 
-  // ── Cover / Header ──────────────────────────────────────────────────────────
-  // Accent bar at top
-  doc.setFillColor(196, 30, 58); // --accent color
-  doc.rect(0, 0, pageWidth, 8, "F");
-
-  y = 20;
-
-  // Axiom branding
-  doc.setFontSize(9);
+  y = 70;
+  doc.setFontSize(54);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(196, 30, 58);
-  doc.text("AXIOM RESEARCH INTELLIGENCE", margin, y);
-  y += 5;
-
-  doc.setFontSize(7);
+  doc.setTextColor(255, 255, 255);
+  doc.text("AXIOM", margin, y);
+  
+  y += 12;
+  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(156, 163, 175);
-  doc.text(`Generated ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}`, margin, y);
-  if (sessionId) {
-    doc.text(`Session: ${sessionId.slice(0, 8)}`, pageWidth - margin - 30, y);
-  }
-  y += 8;
+  doc.setTextColor(113, 113, 122);
+  doc.text("INTELLIGENCE SYNTHESIS REPORT", margin, y);
 
-  // Divider
-  doc.setDrawColor(229, 231, 235);
-  doc.setLineWidth(0.3);
-  doc.line(margin, y, pageWidth - margin, y);
-  y += 8;
+  y += 50;
+  doc.setDrawColor(63, 63, 70);
+  doc.setLineWidth(0.5);
+  doc.line(margin, y, margin + 40, y);
+  
+  y += 20;
+  addWrappedText(goal, 22, "bold", [255, 255, 255] as const, 1.3, "helvetica", "left");
+  
+  y = pageHeight - 40;
+  doc.setFontSize(9);
+  doc.setTextColor(161, 161, 170);
+  doc.text(`SESSION ID: ${sessionId ?? "N/A"}`, margin, y);
+  y += 6;
+  doc.text(`DATE: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`, margin, y);
+  y += 6;
+  doc.text(`CLASSIFICATION: UNCLASSIFIED // PROPRIETARY`, margin, y);
 
-  // ── Parse and render markdown ────────────────────────────────────────────────
-  const lines = report.split("\n");
+  // ── Content ────────────────────────────────────────────────────────
+  doc.addPage();
+  addPageTint();
+  y = 22;
+  addHeader(1);
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    // H1
-    if (line.startsWith("# ")) {
-      const text = line.replace(/^# /, "");
-      addSpacing(2);
-      // Accent underline for h1
-      addWrappedText(text, 18, "bold", [15, 17, 23], 1.4);
-      const titleY = y;
-      doc.setDrawColor(196, 30, 58);
-      doc.setLineWidth(0.8);
-      doc.line(margin, titleY, pageWidth - margin, titleY);
-      y += 6;
-    }
-    // H2
-    else if (line.startsWith("## ")) {
-      const text = line.replace(/^## /, "");
-      addSpacing(5);
-      addWrappedText(text, 13, "bold", [15, 17, 23], 1.3);
-      addSpacing(2);
-    }
-    // H3
-    else if (line.startsWith("### ")) {
-      const text = line.replace(/^### /, "").toUpperCase();
+  const paragraphs = report.split("\n");
+  for (const p of paragraphs) {
+    if (p.startsWith("# ")) {
+      const text = p.replace(/^# /, "");
+      checkSpace(30);
+      addSpacing(8);
+      addWrappedText(text, 28, "bold", [15, 15, 18] as const, 1.1, "helvetica", "left");
+      doc.setDrawColor(...BRAND_BLUE);
+      doc.setLineWidth(1);
+      doc.line(margin, y + 1.5, pageWidth - margin, y + 1.5);
+      addSpacing(10);
+    } else if (p.startsWith("## ")) {
+      const text = p.replace(/^## /, "");
+      checkSpace(20);
+      addSpacing(6);
+      addWrappedText(text, 16, "bold", [24, 24, 27] as const, 1.2, "helvetica", "left");
+      addSpacing(2.5); // Tight gap below H2
+    } else if (p.startsWith("### ")) {
+      const text = p.replace(/^### /, "").toUpperCase();
+      checkSpace(12);
       addSpacing(3);
-      addWrappedText(text, 8, "bold", [196, 30, 58], 1.3);
-      addSpacing(1);
-    }
-    // Horizontal rule
-    else if (line.startsWith("---") || line.startsWith("===")) {
+      addWrappedText(text, 8.5, "bold", BRAND_BLUE, 1.2, "helvetica", "left");
+      addSpacing(1.5); // Very tight gap below H3
+    } else if (p.trim() === "") {
       addSpacing(2);
-      doc.setDrawColor(229, 231, 235);
-      doc.setLineWidth(0.3);
-      doc.line(margin, y, pageWidth - margin, y);
-      addSpacing(3);
-    }
-    // Blank line
-    else if (line.trim() === "") {
-      addSpacing(2);
-    }
-    // Table row (basic rendering)
-    else if (line.startsWith("|")) {
-      // Skip separator rows
-      if (line.includes("---")) continue;
-      const cells = line.split("|").filter((c) => c.trim() !== "");
-      if (cells.length === 0) continue;
-      const isHeader = i > 0 && lines[i + 1]?.includes("---");
-
-      doc.setFontSize(8);
-      const cellWidth = contentWidth / cells.length;
-      const rowH = 6;
-
-      if (y + rowH > pageHeight - margin) {
-        doc.addPage();
-        y = margin;
-      }
-
-      cells.forEach((cell, ci) => {
-        const cx = margin + ci * cellWidth;
-        if (isHeader) {
-          doc.setFillColor(245, 245, 245);
-          doc.rect(cx, y - 4, cellWidth, rowH, "F");
-          doc.setFont("helvetica", "bold");
-          doc.setTextColor(107, 114, 128);
-        } else {
-          doc.setFont("helvetica", "normal");
-          doc.setTextColor(55, 65, 81);
-        }
-        const cellText = doc.splitTextToSize(cell.trim(), cellWidth - 2);
-        doc.text(cellText[0] || "", cx + 1, y);
-      });
-
-      // Row border
-      doc.setDrawColor(243, 244, 246);
-      doc.setLineWidth(0.2);
-      doc.line(margin, y + 2, pageWidth - margin, y + 2);
-      y += rowH;
-    }
-    // Blockquote
-    else if (line.startsWith("> ")) {
-      const text = line.replace(/^> /, "");
-      addSpacing(2);
-      // Left accent bar
-      doc.setFillColor(196, 30, 58);
-      doc.rect(margin, y - 3, 2, 8, "F");
-      doc.setFillColor(255, 240, 243);
-      doc.rect(margin + 2, y - 3, contentWidth - 2, 8, "F");
-      addWrappedText(text, 9, "italic", [55, 65, 81], 1.4, 6);
-      addSpacing(3);
-    }
-    // Code block
-    else if (line.startsWith("```")) {
-      // Collect code block
-      const codeLines: string[] = [];
-      i++;
-      while (i < lines.length && !lines[i].startsWith("```")) {
-        codeLines.push(lines[i]);
-        i++;
-      }
-      const code = codeLines.join("\n");
-      if (code.trim()) {
-        addSpacing(2);
-        const codeLineH = 4;
-        const blockH = codeLines.length * codeLineH + 6;
-
-        if (y + blockH > pageHeight - margin) {
-          doc.addPage();
-          y = margin;
-        }
-
-        doc.setFillColor(13, 17, 23);
-        doc.rect(margin, y - 3, contentWidth, blockH, "F");
-        doc.setFontSize(7.5);
-        doc.setFont("courier", "normal");
-        doc.setTextColor(201, 209, 217);
-
-        codeLines.forEach((cl) => {
-          if (y + codeLineH > pageHeight - margin - 5) {
-            doc.addPage();
-            y = margin;
-            doc.setFillColor(13, 17, 23);
-            doc.rect(margin, y - 3, contentWidth, pageHeight, "F");
-          }
-          doc.text(cl, margin + 3, y);
-          y += codeLineH;
-        });
-        addSpacing(5);
-      }
-    }
-    // List items
-    else if (line.match(/^[-*+]\s/) || line.match(/^\d+\.\s/)) {
-      const isBullet = line.match(/^[-*+]\s/);
-      const text = line.replace(/^[-*+]\s/, "").replace(/^\d+\.\s/, "");
-      const stripped = stripInlineMarkdown(text);
-
-      if (y + 5 > pageHeight - margin) {
-        doc.addPage();
-        y = margin;
-      }
-
-      // Bullet dot or number
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(196, 30, 58);
-      if (isBullet) {
-        doc.circle(margin + 2, y - 1.5, 0.8, "F");
-      } else {
-        const num = line.match(/^(\d+)\./)?.[1] ?? "•";
-        doc.text(num + ".", margin, y);
-      }
-
-      addWrappedText(stripped, 9, "normal", [55, 65, 81], 1.4, 6);
-      addSpacing(0.5);
-    }
-    // Normal paragraph text
-    else if (line.trim()) {
-      const stripped = stripInlineMarkdown(line);
-      addWrappedText(stripped, 9.5, "normal", [55, 65, 81], 1.6);
-      addSpacing(1);
+    } else {
+      const stripped = stripInlineMarkdown(p);
+      addWrappedText(stripped, 10.5, "normal", BODY_TEXT, 1.6, "times", "justify");
+      addSpacing(4); // Paragraph gap
     }
   }
 
-  // ── Footer on every page ────────────────────────────────────────────────────
-  const totalPages = (doc.internal as any).getNumberOfPages?.() ?? 1;
-  for (let p = 1; p <= totalPages; p++) {
-    doc.setPage(p);
-    // Bottom accent bar
-    doc.setFillColor(196, 30, 58);
-    doc.rect(0, pageHeight - 6, pageWidth, 6, "F");
-    // Page number
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(255, 255, 255);
-    doc.text(
-      `Axiom Research Intelligence  ·  Page ${p} of ${totalPages}`,
-      pageWidth / 2,
-      pageHeight - 2,
-      { align: "center" }
-    );
-  }
-
-  const filename = `axiom-${sessionId?.slice(0, 8) ?? "report"}-${Date.now()}.pdf`;
+  addFooter(doc.getCurrentPageInfo().pageNumber);
+  const filename = `axiom-intelligence-${Date.now()}.pdf`;
   doc.save(filename);
 }
 
-// ── Strip inline markdown (bold, italic, code, links) ─────────────────────────
 function stripInlineMarkdown(text: string): string {
   return text
     .replace(/\*\*(.+?)\*\*/g, "$1")
@@ -336,15 +255,75 @@ function stripInlineMarkdown(text: string): string {
     .replace(/__(.+?)__/g, "$1")
     .replace(/_(.+?)_/g, "$1")
     .replace(/`(.+?)`/g, "$1")
-    .replace(/\[(.+?)\]\(.+?\)/g, "$1")
-    .replace(/!\[.*?\]\(.+?\)/g, "")
-    .replace(/~~(.+?)~~/g, "$1");
+    .replace(/\[(.+?)\]\(.+?\)/g, "$1");
+}
+
+// ── Reasoning Trace Component ──────────────────────────────────────────────────
+
+function ReasoningTrace({ thoughts }: { thoughts: ResearchState["thoughts"] }) {
+  if (!thoughts || thoughts.length === 0) return null;
+
+  return (
+    <div className="reasoning-trace" style={{
+      marginBottom: "2.5rem",
+      padding: "1.5rem",
+      background: "var(--surface)",
+      border: "1px solid var(--border)",
+      borderRadius: "var(--radius-lg)",
+      position: "relative",
+      overflow: "hidden"
+    }}>
+      <div style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "2px",
+        height: "100%",
+        background: "linear-gradient(to bottom, var(--accent), transparent)"
+      }} />
+      
+      <p style={{
+        fontFamily: "var(--font-mono)",
+        fontSize: "0.65rem",
+        textTransform: "uppercase",
+        letterSpacing: "0.1em",
+        color: "var(--accent)",
+        marginBottom: "1rem",
+        display: "flex",
+        alignItems: "center",
+        gap: "8px"
+      }}>
+        <span className="pulse-dot" />
+        Agent Reasoning Trace
+      </p>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        {thoughts.slice(-3).map((thought, i) => (
+          <motion.div
+            key={thought.id}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.1 }}
+            style={{
+              fontSize: "0.875rem",
+              color: i === 2 ? "var(--text-primary)" : "var(--text-muted)",
+              lineHeight: "1.5",
+              paddingLeft: "12px",
+              borderLeft: "1px solid var(--border-med)"
+            }}
+          >
+            {thought.text}
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function ResearchCanvas({ state }: { state: ResearchState }) {
-  const { report, status, duration, partial, model, sessionId, error, goal } = state;
+  const { report, status, duration, partial, model, sessionId, error, goal, thoughts } = state;
   const isStreaming = status === "running" && report.length > 0;
   const isDone      = status === "completed" || status === "partial";
   const hasToc      = report.split("\n").filter(l => l.startsWith("##")).length >= 2;
@@ -354,7 +333,7 @@ export default function ResearchCanvas({ state }: { state: ResearchState }) {
   const downloadMarkdown = () => {
     const a = document.createElement("a");
     a.href  = URL.createObjectURL(new Blob([report], { type: "text/markdown" }));
-    a.download = `axiom-${sessionId?.slice(0, 8) ?? "report"}.md`;
+    a.download = `axiom-research.md`;
     a.click();
   };
 
@@ -365,7 +344,6 @@ export default function ResearchCanvas({ state }: { state: ResearchState }) {
       await exportToPDF(report, goal, sessionId);
     } catch (err) {
       console.error("PDF export failed:", err);
-      // Fallback: open print dialog
       window.print();
     } finally {
       setPdfLoading(false);
@@ -374,57 +352,39 @@ export default function ResearchCanvas({ state }: { state: ResearchState }) {
 
   return (
     <div className="canvas-scroll">
-      <div style={{
-        maxWidth: "48rem",
-        margin: "0 auto",
-        padding: "0 2.5rem",
-      }}>
+      <div style={{ maxWidth: "48rem", margin: "0 auto", padding: "0 2.5rem" }}>
 
-        {/* ── Queued state ─────────────────────────────────────────── */}
+        {/* ── Queued State ─────────────────────────────────────────── */}
         <AnimatePresence>
           {status === "queued" && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              style={{ textAlign: "center", paddingTop: "5rem" }}
+              style={{ textAlign: "center", paddingTop: "8rem" }}
             >
-              <div style={{
-                width: 24,
-                height: 24,
-                borderRadius: "50%",
-                border: "2px solid var(--accent)",
-                borderTopColor: "transparent",
-                margin: "0 auto 1rem",
-                animation: "spin 0.75s linear infinite",
-              }} />
+              <div className="loading-spinner" />
               <p style={{
                 fontFamily: "var(--font-ui)",
-                fontSize: "0.8125rem",
+                fontSize: "0.875rem",
                 color: "var(--text-muted)",
+                marginTop: "1.5rem"
               }}>
-                Initialising Axiom agent pipeline...
+                ◈ Axiom 2.0 Deep Research Engine Initializing...
               </p>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* ── Auto h1 if report doesn't open with one ──────────────── */}
-        {(isStreaming || isDone) && !report.trimStart().startsWith("#") && goal && (
+        {/* ── Reasoning Trace ──────────────────────────────────────── */}
+        {status === "running" && <ReasoningTrace thoughts={thoughts} />}
+
+        {/* ── Report Title ─────────────────────────────────────────── */}
+        {(isStreaming || isDone) && goal && (
           <motion.h1
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            style={{
-              fontFamily: "var(--font-ui)",
-              fontSize: "1.625rem",
-              fontWeight: 700,
-              color: "var(--text-primary)",
-              marginBottom: "0.875rem",
-              paddingBottom: "0.875rem",
-              borderBottom: "2px solid var(--accent)",
-              letterSpacing: "-0.018em",
-              lineHeight: 1.2,
-            }}
+            className="report-title"
           >
             {goal}
           </motion.h1>
@@ -432,235 +392,55 @@ export default function ResearchCanvas({ state }: { state: ResearchState }) {
 
         {/* ── Toolbar ──────────────────────────────────────────────── */}
         {report.length > 0 && (
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: "1.75rem",
-            paddingBottom: "1rem",
-            borderBottom: "1px solid var(--border)",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "0.6rem",
-                textTransform: "uppercase",
-                letterSpacing: "0.09em",
-                padding: "3px 9px",
-                borderRadius: 99,
-                border: `1px solid ${isStreaming ? "var(--accent-mid)" : "rgba(63,185,80,0.3)"}`,
-                background: isStreaming ? "var(--accent-light)" : "rgba(63,185,80,0.06)",
-                color: isStreaming ? "var(--accent)" : "var(--term-green)",
-              }}>
-                {isStreaming ? "Streaming" : partial ? "Partial" : "Complete"}
+          <div className="canvas-toolbar">
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span className={`status-badge ${status}`}>
+                {status}
               </span>
-              {isDone && model    && (
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-faint)" }}>
-                  {model}
-                </span>
-              )}
-              {isDone && duration && (
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-faint)" }}>
-                  {duration}s
-                </span>
-              )}
+              {isDone && model && <span className="meta-tag">{model}</span>}
+              {isDone && duration && <span className="meta-tag">{duration}s</span>}
             </div>
 
-            {/* Export buttons */}
             {isDone && (
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                {/* Export .md */}
-                <button
-                  onClick={downloadMarkdown}
-                  title="Download as Markdown"
-                  style={{
-                    fontFamily: "var(--font-ui)",
-                    fontSize: "0.75rem",
-                    fontWeight: 500,
-                    padding: "5px 12px",
-                    borderRadius: "var(--radius)",
-                    background: "transparent",
-                    color: "var(--text-muted)",
-                    border: "1px solid var(--border)",
-                    cursor: "pointer",
-                    transition: "all 0.14s",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 5,
-                  }}
-                  onMouseEnter={e => {
-                    const el = e.currentTarget as HTMLElement;
-                    el.style.borderColor = "var(--border-med)";
-                    el.style.color = "var(--text-secondary)";
-                  }}
-                  onMouseLeave={e => {
-                    const el = e.currentTarget as HTMLElement;
-                    el.style.borderColor = "var(--border)";
-                    el.style.color = "var(--text-muted)";
-                  }}
-                >
-                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                    <path d="M5.5 1v6M2.5 4.5l3 3 3-3M1.5 9.5h8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  .md
-                </button>
-
-                {/* Export PDF */}
-                <button
-                  onClick={downloadPDF}
-                  disabled={pdfLoading}
-                  title="Download as PDF"
-                  style={{
-                    fontFamily: "var(--font-ui)",
-                    fontSize: "0.75rem",
-                    fontWeight: 500,
-                    padding: "5px 14px",
-                    borderRadius: "var(--radius)",
-                    background: pdfLoading ? "var(--border-med)" : "var(--text-primary)",
-                    color: "#fff",
-                    border: `1px solid ${pdfLoading ? "var(--border-med)" : "var(--text-primary)"}`,
-                    cursor: pdfLoading ? "not-allowed" : "pointer",
-                    transition: "all 0.14s",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    opacity: pdfLoading ? 0.7 : 1,
-                  }}
-                  onMouseEnter={e => {
-                    if (pdfLoading) return;
-                    const el = e.currentTarget as HTMLElement;
-                    el.style.background = "var(--accent)";
-                    el.style.borderColor = "var(--accent)";
-                  }}
-                  onMouseLeave={e => {
-                    if (pdfLoading) return;
-                    const el = e.currentTarget as HTMLElement;
-                    el.style.background = "var(--text-primary)";
-                    el.style.borderColor = "var(--text-primary)";
-                  }}
-                >
-                  {pdfLoading ? (
-                    <>
-                      <span style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: "50%",
-                        border: "1.5px solid rgba(255,255,255,0.4)",
-                        borderTopColor: "#fff",
-                        animation: "spin 0.6s linear infinite",
-                        flexShrink: 0,
-                      }} />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                        <path d="M1.5 8.5v1a1 1 0 001 1h6a1 1 0 001-1v-1M5.5 1v6M2.5 4.5l3 3 3-3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      Export PDF
-                    </>
-                  )}
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={downloadMarkdown} className="btn-secondary">.md</button>
+                <button onClick={downloadPDF} disabled={pdfLoading} className="btn-primary">
+                  {pdfLoading ? "Generating..." : "Export PDF"}
                 </button>
               </div>
             )}
           </div>
         )}
 
-        {/* ── Table of contents ────────────────────────────────────── */}
-        {hasToc && (
-          <motion.div
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <TableOfContents markdown={report} />
-          </motion.div>
-        )}
+        {/* ── TOC ──────────────────────────────────────────────────── */}
+        {hasToc && <TableOfContents markdown={report} />}
 
-        {/* ── Report body ───────────────────────────────────────────── */}
+        {/* ── Report Body ───────────────────────────────────────────── */}
         {report.length > 0 && (
-          <div
-            className="report-prose"
-            style={{
-              fontSize: "1.125rem",
-              lineHeight: 1.75,
-            }}
-          >
+          <div className="report-prose">
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={md}>
               {report}
             </ReactMarkdown>
-            {isStreaming && (
-              <span style={{
-                display: "inline-block",
-                width: 2,
-                height: "1.1em",
-                background: "var(--accent)",
-                marginLeft: 2,
-                verticalAlign: "middle",
-                animation: "blink 1s linear infinite",
-              }} />
-            )}
+            {isStreaming && <span className="streaming-cursor" />}
           </div>
         )}
 
-        {/* ── Analytics Panel (shown after report is complete) ─────── */}
+        {/* ── Analytics ────────────────────────────────────────────── */}
         <ReportAnalytics state={state} />
 
-        {/* ── Error state ──────────────────────────────────────────── */}
+        {/* ── Error State ──────────────────────────────────────────── */}
         {status === "failed" && error && (
           <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={{
-              borderRadius: "var(--radius-lg)",
-              border: "1px solid var(--accent-mid)",
-              background: "var(--accent-light)",
-              padding: "1.25rem 1.5rem",
-              marginTop: "1rem",
-            }}
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="error-panel"
           >
-            <p style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: "0.6rem",
-              textTransform: "uppercase",
-              letterSpacing: "0.09em",
-              color: "var(--accent)",
-              marginBottom: "0.5rem",
-            }}>
-              Pipeline error
-            </p>
-            <p style={{
-              fontFamily: "var(--font-ui)",
-              fontSize: "0.875rem",
-              color: "var(--text-secondary)",
-              lineHeight: 1.65,
-            }}>
-              {error}
-            </p>
-            {error.toLowerCase().includes("quota") && (
-              <p style={{
-                fontFamily: "var(--font-ui)",
-                fontSize: "0.8125rem",
-                color: "var(--text-muted)",
-                marginTop: "0.75rem",
-                lineHeight: 1.6,
-              }}>
-                Free quota resets at midnight Pacific.{" "}
-                <a
-                  href="https://aistudio.google.com/app/apikey"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: "var(--accent)" }}
-                >
-                  Generate a new API key
-                </a>{" "}
-                to continue immediately.
-              </p>
-            )}
+            <p className="error-label">Pipeline Interrupted</p>
+            <p className="error-text">{error}</p>
           </motion.div>
         )}
 
-        <div ref={endRef} />
+        <div ref={endRef} style={{ height: "4rem" }} />
       </div>
     </div>
   );

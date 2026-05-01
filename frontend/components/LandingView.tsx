@@ -126,15 +126,15 @@ export default function LandingView({ onSubmit, selectedModel, onModelChange }: 
           position:  "fixed",
           top:       dropdownPos.top,
           right:     dropdownPos.right,
-          zIndex:    9999,          // above everything
-          background: "rgba(255,255,255,0.97)",
-          backdropFilter: "blur(20px) saturate(180%)",
-          WebkitBackdropFilter: "blur(20px) saturate(180%)",
+          zIndex:    9999,
+          background: "var(--glass-bg)",
+          backdropFilter: "var(--glass-blur)",
+          WebkitBackdropFilter: "var(--glass-blur)",
           border:       "1px solid var(--border-med)",
           borderRadius: "var(--radius-lg)",
-          padding:      "4px",
-          boxShadow:    "0 8px 32px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.06)",
-          minWidth:     192,
+          padding:      "6px",
+          boxShadow:    "0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px var(--glass-border)",
+          minWidth:     220,
         }}
       >
         {MODEL_OPTIONS.map(opt => {
@@ -155,9 +155,9 @@ export default function LandingView({ onSubmit, selectedModel, onModelChange }: 
                 display:        "flex",
                 flexDirection:  "column",
                 width:          "100%",
-                padding:        "9px 12px",
+                padding:        "10px 14px",
                 borderRadius:   "var(--radius)",
-                background:     isSelected ? "var(--accent-light)" : "transparent",
+                background:     isSelected ? "var(--accent-mid)" : "transparent",
                 border:         "none",
                 cursor:         "pointer",
                 textAlign:      "left",
@@ -167,7 +167,7 @@ export default function LandingView({ onSubmit, selectedModel, onModelChange }: 
               }}
               onMouseEnter={e => {
                 if (!isSelected)
-                  (e.currentTarget as HTMLElement).style.background = "var(--overlay-soft)";
+                  (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.03)";
               }}
               onMouseLeave={e => {
                 if (!isSelected)
@@ -181,7 +181,7 @@ export default function LandingView({ onSubmit, selectedModel, onModelChange }: 
                 gap:         6,
                 fontFamily:  "var(--font-ui)",
                 fontWeight:  isSelected ? 600 : 400,
-                fontSize:    "0.8125rem",
+                fontSize:    "0.875rem",
                 color:       isSelected ? "var(--accent)" : "var(--text-primary)",
               }}>
                 {/* Fixed-width checkmark slot so text doesn't shift */}
@@ -218,37 +218,31 @@ export default function LandingView({ onSubmit, selectedModel, onModelChange }: 
     <div className="landing-wrap">
       {/* Portal dropdown — rendered outside all overflow:hidden containers */}
       {dropdown}
-
+ 
       {/* ── Hero ──────────────────────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        style={{ textAlign: "center", marginBottom: "2.25rem", position: "relative", zIndex: 1 }}
+        style={{ textAlign: "center", marginBottom: "3rem", position: "relative", zIndex: 1 }}
       >
-        <h1 style={{
-          fontFamily:    "var(--font-ui)",
-          fontSize:      "clamp(1.875rem, 4.5vw, 2.75rem)",
-          fontWeight:    700,
-          color:         "var(--text-primary)",
-          lineHeight:    1.12,
-          letterSpacing: "-0.03em",
-          marginBottom:  "0.875rem",
-        }}>
-          Intelligence, synthesised.<br />
+        <h1 className="hero-heading">
+          Beyond Search.<br />
+          Pure Insight.
         </h1>
         <p style={{
           fontFamily: "var(--font-ui)",
-          fontWeight: 400,
-          fontSize:   "1rem",
-          color:      "var(--text-muted)",
-          lineHeight: 1.65,
-          maxWidth:   "420px",
+          fontWeight: 450,
+          fontSize:   "1.25rem",
+          color:      "var(--text-secondary)",
+          lineHeight: 1.5,
+          maxWidth:   "520px",
           margin:     "0 auto",
+          opacity:    0.9,
+          letterSpacing: "-0.01em",
         }}>
-          Axiom deploys a multi-agent crew to search the web,
-          gather evidence, and synthesise a cited report in 
-          the time it takes to read one paper.
+          Axiom v4 deploys a deterministic research engine to audit the web, 
+          verify evidence in parallel, and synthesize elite strategic reports.
         </p>
       </motion.div>
 
@@ -321,11 +315,16 @@ export default function LandingView({ onSubmit, selectedModel, onModelChange }: 
               onClick={submit}
               disabled={goal.trim().length < 10}
               aria-label="Run research"
-              style={{ outline: "none" }}
+              style={{ 
+                outline: "none",
+                background: goal.trim().length < 10 ? "var(--border-med)" : "var(--accent)",
+                boxShadow: goal.trim().length < 10 ? "none" : "0 4px 12px rgba(59, 130, 246, 0.3)",
+                transition: "all 0.2s ease"
+              }}
             >
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 13 13" fill="none" aria-hidden="true">
                 <path d="M6.5 10.5V2.5M2.5 6.5l4-4 4 4"
-                  stroke="white" strokeWidth="1.6"
+                  stroke="white" strokeWidth="2"
                   strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
@@ -397,7 +396,7 @@ export default function LandingView({ onSubmit, selectedModel, onModelChange }: 
           lineHeight:  1.6,
         }}
       >
-        Powered by Gemini · Serper.dev · CrewAI &nbsp;·&nbsp; Reports take 60–120 seconds
+        Powered by Gemini · Serper.dev · CrewAI &nbsp;·&nbsp; Deep research requires 3–5 minutes
       </motion.p>
     </div>
   );

@@ -19,13 +19,14 @@ export default function AxiomApp() {
   const [historyKey,      setHistoryKey]      = useState(0);
   const [selectedModel,   setSelectedModel]   = useState<SelectedModel>("flash");
   const [sidebarOpen,     setSidebarOpen]     = useState(true);
-  // History drawer — visible from landing AND research views
+  const [hubOpen,         setHubOpen]         = useState(false);
   const [drawerOpen,      setDrawerOpen]      = useState(false);
 
   // ── Start new research ───────────────────────────────────────────────────
   const handleSubmit = useCallback((goal: string, model: SelectedModel) => {
     setView("research");
-    setSidebarOpen(true);
+    setSidebarOpen(window.innerWidth > 1024);
+    setHubOpen(false);
     setDrawerOpen(false);
     startResearch(goal, model);
   }, [startResearch]);
@@ -35,20 +36,25 @@ export default function AxiomApp() {
     reset();
     setView("landing");
     setDrawerOpen(false);
+    setHubOpen(false);
     setHistoryKey(k => k + 1);
   }, [reset]);
 
   // ── Logo click behaviour ──────────────────────────────────────────────────
-  // Landing view  → open/toggle the history drawer
-  // Research view → toggle the left sidebar (existing behaviour)
   const handleLogoClick = useCallback(() => {
     if (view === "research") {
       setSidebarOpen(v => !v);
+      if (window.innerWidth <= 1024) setHubOpen(false);
     } else {
-      // On landing, logo click opens the history drawer
       setDrawerOpen(v => !v);
     }
   }, [view]);
+
+  // ── Hub toggle (mobile only) ──────────────────────────────────────────────
+  const handleHubClick = useCallback(() => {
+    setHubOpen(v => !v);
+    if (window.innerWidth <= 1024) setSidebarOpen(false);
+  }, []);
 
   // ── Load a past session (from sidebar OR from the history drawer) ─────────
   const handleSelectSession = useCallback((id: string) => {
@@ -77,6 +83,7 @@ export default function AxiomApp() {
       <NavBar
         status={state.status}
         onLogoClick={handleLogoClick}
+        onHubClick={handleHubClick}
         sessionTitle={sessionTitle}
         showNav={view === "research"}
       />
@@ -118,6 +125,7 @@ export default function AxiomApp() {
                   exit={{ x: -240,    opacity: 0 }}
                   transition={{ duration: 0.38, ease: EASING }}
                   style={{ display: "flex", flexShrink: 0 }}
+                  className="mobile-active" // handled by media queries
                 >
                   <InvestigationSidebar
                     refreshKey={historyKey}
@@ -134,19 +142,32 @@ export default function AxiomApp() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4, ease: EASING, delay: 0.12 }}
               className="canvas-panel"
+              onClick={() => {
+                if (window.innerWidth <= 1024) {
+                  setSidebarOpen(false);
+                  setHubOpen(false);
+                }
+              }}
             >
               <ResearchCanvas state={state} />
             </motion.div>
 
             {/* Right agent hub */}
-            <motion.div
-              initial={{ x: 300, opacity: 0 }}
-              animate={{ x: 0,   opacity: 1 }}
-              transition={{ duration: 0.45, ease: EASING, delay: 0.1 }}
-              style={{ display: "flex", flexShrink: 0 }}
-            >
-              <AgentHub state={state} />
-            </motion.div>
+            <AnimatePresence>
+              {(hubOpen || window.innerWidth > 1024) && (
+                <motion.div
+                  key="hub"
+                  initial={{ x: 300, opacity: 0 }}
+                  animate={{ x: 0,   opacity: 1 }}
+                  exit={{ x: 300,    opacity: 0 }}
+                  transition={{ duration: 0.4, ease: EASING }}
+                  style={{ display: "flex", flexShrink: 0 }}
+                  className={hubOpen ? "mobile-active" : ""}
+                >
+                  <AgentHub state={state} />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>

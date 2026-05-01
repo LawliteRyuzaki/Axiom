@@ -47,6 +47,8 @@ class SSEEvent(BaseModel):
         "status",       # Agent lifecycle update
         "progress",     # Human-readable progress (legacy)
         "log",          # Granular terminal log line
+        "reasoning",    # Internal thought process of the agent
+        "thought",      # Short, punchy thought bubbles
         "query",        # A sub-query discovered by Scout
         "source",       # A source URL found
         "report_chunk", # A streaming chunk of the Markdown report

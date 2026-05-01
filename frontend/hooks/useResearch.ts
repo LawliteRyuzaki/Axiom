@@ -15,6 +15,7 @@ const INITIAL: ResearchState = {
   partial:   false,
   model:     null,
   goal:      "",
+  thoughts:  [],
 };
 
 let _id = 0;
@@ -150,6 +151,17 @@ export function useResearch() {
       case "log":
       case "progress":
         setState(p => ({ ...p, logs: [...p.logs, mkLog(data)] }));
+        break;
+      case "reasoning":
+      case "thought":
+        setState(p => ({
+          ...p,
+          thoughts: [...(p.thoughts || []), {
+            id: Date.now(),
+            text: data,
+            type: type as "reasoning" | "thought"
+          }]
+        }));
         break;
       case "query":
         setState(p => ({ ...p, queries: [...p.queries, data] }));

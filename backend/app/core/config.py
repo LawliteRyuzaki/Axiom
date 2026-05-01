@@ -47,7 +47,9 @@ class Settings(BaseSettings):
 
     # ── App ───────────────────────────────────────────────────────────────────
     log_level: str  = Field(default="INFO", env="LOG_LEVEL")
-    app_version: str = "1.0.0"
+    app_version: str = "4.0.0"
+    research_max_iterations: int = 3
+    scoring_threshold: float = 0.6
 
     # ── Derived ───────────────────────────────────────────────────────────────
     @property

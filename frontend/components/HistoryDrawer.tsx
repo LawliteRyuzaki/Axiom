@@ -109,27 +109,27 @@ export default function HistoryDrawer({ open, onClose, onSelect, onNewSession }:
           />
 
           {/* Drawer panel */}
-          <motion.div
-            key="drawer"
-            ref={drawerRef}
-            initial={{ x: -380, opacity: 0 }}
-            animate={{ x: 0,    opacity: 1 }}
-            exit={{ x: -380,    opacity: 0 }}
-            transition={{ duration: 0.38, ease: EASING }}
-            style={{
-              position:    "fixed",
-              top:         0,
-              left:        0,
-              width:       360,
-              height:      "100vh",
-              background:  "var(--surface)",
-              borderRight: "1px solid var(--border)",
-              zIndex:      201,
-              display:     "flex",
-              flexDirection: "column",
-              boxShadow:   "4px 0 32px rgba(0,0,0,0.10)",
-            }}
-          >
+            <motion.div
+              key="drawer"
+              ref={drawerRef}
+              initial={{ x: -400, opacity: 0 }}
+              animate={{ x: 0,    opacity: 1 }}
+              exit={{ x: -400,    opacity: 0 }}
+              transition={{ duration: 0.38, ease: EASING }}
+              style={{
+                position:    "fixed",
+                top:         0,
+                left:        0,
+                width:       "min(360px, 85vw)",
+                height:      "100vh",
+                background:  "var(--surface)",
+                borderRight: "1px solid var(--border)",
+                zIndex:      201,
+                display:     "flex",
+                flexDirection: "column",
+                boxShadow:   "4px 0 32px rgba(0,0,0,0.10)",
+              }}
+            >
             {/* ── Header ──────────────────────────────────────────── */}
             <div style={{
               padding:      "16px 20px 12px",
@@ -158,7 +158,7 @@ export default function HistoryDrawer({ open, onClose, onSelect, onNewSession }:
                   <p style={{
                     fontFamily: "var(--font-mono)",
                     fontSize:   "0.6rem",
-                    color:      "var(--text-faint)",
+                    color:      "var(--text-muted)",
                     letterSpacing: "0.06em",
                   }}>
                     {sessions.length} session{sessions.length !== 1 ? "s" : ""} total
@@ -217,8 +217,8 @@ export default function HistoryDrawer({ open, onClose, onSelect, onNewSession }:
                 }
               >
                 <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ flexShrink: 0 }}>
-                  <circle cx="5.5" cy="5.5" r="4" stroke="var(--text-faint)" strokeWidth="1.2"/>
-                  <path d="M9 9l2.5 2.5" stroke="var(--text-faint)" strokeWidth="1.2" strokeLinecap="round"/>
+                  <circle cx="5.5" cy="5.5" r="4" stroke="var(--text-muted)" strokeWidth="1.2"/>
+                  <path d="M9 9l2.5 2.5" stroke="var(--text-muted)" strokeWidth="1.2" strokeLinecap="round"/>
                 </svg>
                 <input
                   type="text"
@@ -243,7 +243,7 @@ export default function HistoryDrawer({ open, onClose, onSelect, onNewSession }:
                       border:     "none",
                       cursor:     "pointer",
                       padding:    0,
-                      color:      "var(--text-faint)",
+                      color:      "var(--text-muted)",
                       lineHeight: 1,
                       outline:    "none",
                     }}

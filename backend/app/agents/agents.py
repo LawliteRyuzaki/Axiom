@@ -2,6 +2,7 @@
 import os
 from crewai import Agent, LLM
 from crewai_tools import SerperDevTool
+from crewai.tools import BaseTool
 from app.core.config import get_settings
 from app.core.logging import logger
 
@@ -36,14 +37,31 @@ def _build_llm(model: str, api_key: str, temperature: float = 0.3) -> LLM:
         os.environ["GROQ_API_KEY"] = api_key
     else:
         os.environ["GEMINI_API_KEY"] = api_key
+    
     logger.info("LLM: %s (temp=%.2f)", model, temperature)
-    return LLM(
-        model=model,
-        api_key=api_key,
-        temperature=temperature,
-        max_tokens=8192,
-        timeout=150,
-    )
+    
+    # Axiom v4: Enhanced LLM initialization with provider-specific fallbacks
+    try:
+        return LLM(
+            model=model,
+            api_key=api_key,
+            temperature=temperature,
+            max_tokens=8192,
+            timeout=150,
+        )
+    except Exception as e:
+        if "groq" in model.lower():
+            logger.warning(f"Native Groq provider failed, falling back to OpenAI-compatible endpoint: {e}")
+            # Use OpenAI compatibility layer for Groq without a prefix to avoid strict validation
+            return LLM(
+                model="llama-3.3-70b-versatile",
+                api_key=api_key,
+                base_url="https://api.groq.com/openai/v1",
+                temperature=temperature,
+                max_tokens=8192,
+                timeout=150,
+            )
+        raise e
 
 
 def _build_serper_tool() -> SerperDevTool:
@@ -52,168 +70,92 @@ def _build_serper_tool() -> SerperDevTool:
     return SerperDevTool(n_results=12)
 
 
-# ── Research Scout ─────────────────────────────────────────────────────────────
+def build_research_architect(model: str, api_key: str) -> Agent:
+    return Agent(
+        role="Principal System Architect",
+        goal=(
+            "Deconstruct the research goal into a verifiable, 3-phase technical roadmap.\n"
+            "Identify exactly which quantitative metrics and primary sources are required."
+        ),
+        backstory="You are a systems architect for a global intelligence agency, specialized in creating bulletproof investigation frameworks.",
+        llm=_build_llm(model, api_key, temperature=0.1),
+        verbose=True,
+        allow_delegation=False
+    )
 
 def build_research_scout(model: str, api_key: str) -> Agent:
     return Agent(
-        role="Senior Research Scout & Information Architect",
+        role="Information Architecture Scout",
         goal=(
-            "Generate exactly 5 to 6 highly targeted search queries.\n\n"
-
-            "CRITICAL RULE:\n"
-            "- EVERY query MUST include time constraints such as: 2024, 2025, 2026, "
-            "'latest', or 'recent research'\n\n"
-
-            "COVERAGE RULE:\n"
-            "- Ensure queries cover DIFFERENT aspects of the topic:\n"
-            "  • foundational theory\n"
-            "  • latest research\n"
-            "  • real-world applications\n"
-            "  • challenges/limitations\n"
-            "  • future trends\n\n"
-
-            "Queries must:\n"
-            "- Be specific and professional\n"
-            "- Avoid overlapping intent\n"
-            "- Target diverse high-quality sources\n\n"
-
-            "Return ONLY a numbered list."
+            "1. Generate exactly 5-8 hyper-targeted search queries based on the architect's roadmap.\n"
+            "2. Ensure queries target official whitepapers, peer-reviewed journals, and technical benchmarks.\n"
+            "MANDATORY: You MUST return the queries in a structured JSON format."
         ),
         backstory=(
-            "You are a world-class research strategist specialising in comprehensive and well-balanced search design."
+            "You are a master of search heuristic design. You operate under a strict protocol: "
+            "Every research roadmap must be broken into exactly 5-8 distinct, verifiable search vectors. "
+            "You provide output in JSON format to ensure the downstream pipeline can process your queries deterministically. [DEBUG: AGENT_ACTIVE_LOGGING_ENABLED]"
         ),
-        llm=_build_llm(model, api_key, temperature=0.2),
+        llm=_build_llm(model, api_key, temperature=0.1),
         verbose=True,
-        allow_delegation=False,
-        memory=True,
-        max_iter=4,
-        max_execution_time=120,
-        max_rpm=3,
+        allow_delegation=False
     )
 
-
-# ── Web Searcher ───────────────────────────────────────────────────────────────
-
-def build_web_searcher(model: str, api_key: str) -> Agent:
+def build_web_searcher(model: str, api_key: str, context=None) -> Agent:
+    from app.tools.research_tools import AxiomDeepSearchTool, AxiomBatchVerifierTool
     return Agent(
-        role="Expert Research Analyst & Evidence Curator",
+        role="Lead Verification Specialist",
         goal=(
-            "For EACH query, extract 6–8 HIGH-QUALITY findings.\n\n"
-
-            "RECENCY RULE:\n"
-            "- At least 70% sources should be from 2024–2026\n"
-            "- Older sources allowed ONLY if foundational and must be labeled [FOUNDATIONAL]\n\n"
-
-            "SOURCE QUALITY RULE:\n"
-            "- Prefer high-quality sources: arXiv, IEEE, Springer, ScienceDirect, official organizations\n"
-            "- Avoid overusing ResearchGate\n\n"
-
-            "SOURCE DIVERSITY RULE:\n"
-            "- Use a WIDE variety of sources\n"
-            "- Avoid repeating the same domain excessively\n"
-            "- Try to introduce NEW sources for new findings\n\n"
-
-            "COVERAGE RULE:\n"
-            "- Ensure findings collectively cover:\n"
-            "  • models/techniques\n"
-            "  • real-world applications\n"
-            "  • metrics/benchmarks\n"
-            "  • limitations\n"
-            "  • trends\n\n"
-
-            "MANDATORY SOURCE RULE:\n"
-            "- EVERY finding MUST include a FULL URL\n"
-            "- If URL is weak → mark [LOW CONFIDENCE]\n\n"
-
-            "DATA PRESERVATION:\n"
-            "- Always include:\n"
-            "  • Title\n"
-            "  • URL\n"
-            "  • Year\n\n"
-
-            "OUTPUT FORMAT:\n"
-            "**Query N: [query text]**\n"
-            "- [Precise finding] (Year: XXXX)\n"
-            "  Title: [Exact title]\n"
-            "  URL: [Full link]\n"
-            "  Credibility: [HIGH/MED/LOW]\n"
+            "1. Execute ALL scouted queries via 'axiom_deep_search'.\n"
+            "2. IMMEDIATELY verify all candidate findings via 'axiom_batch_verifier'.\n"
+            "MANDATORY: You are PROHIBITED from outputting any finding that has not been verified via 'axiom_batch_verifier'.\n"
+            "MANDATORY: If 'axiom_deep_search' returns no results, report 'NO DATA FOUND' - do not fabricate."
         ),
         backstory=(
-            "You are a senior research analyst focused on diverse, high-quality, and well-balanced evidence collection."
+            "You are a clinical data auditor. You treat every piece of information as a hallucination until "
+            "it passes the hardware validator. You do not write; you only verify and curate. [DEBUG: AGENT_ACTIVE_LOGGING_ENABLED]"
         ),
-        tools=[_build_serper_tool()],
-        llm=_build_llm(model, api_key, temperature=0.15),
+        tools=[AxiomDeepSearchTool(), AxiomBatchVerifierTool(context=context)],
+        llm=_build_llm(model, api_key, temperature=0.1),
         verbose=True,
-        allow_delegation=False,
-        memory=True,
-        max_iter=15,
-        max_execution_time=180,
-        max_rpm=3,
+        allow_delegation=False
     )
 
-
-# ── Report Writer ──────────────────────────────────────────────────────────────
+def build_research_reviewer(model: str, api_key: str) -> Agent:
+    return Agent(
+        role="Quality Audit Director",
+        goal=(
+            "Perform a clinical audit of the verified evidence.\n"
+            "CRITICAL DECISION:\n"
+            "- If all roadmap phases have high-fidelity data -> DECISION: GO\n"
+            "- If gaps exist or data is weak -> DECISION: REFINE [Provide specific gap queries]"
+        ),
+        backstory="You are the lead editor for a premier scientific journal, known for a zero-tolerance policy on data gaps.",
+        llm=_build_llm(model, api_key, temperature=0.1),
+        verbose=True,
+        allow_delegation=False
+    )
 
 def build_report_writer(model: str, api_key: str) -> Agent:
     return Agent(
-        role="Principal Research Analyst & Scientific Writer",
+        role="Principal Research Correspondent",
         goal=(
-            "Write a structured research report using ONLY the provided findings.\n\n"
-
-            "STRICT CITATION POLICY:\n"
-            "- Use ONLY URLs provided\n"
-            "- Do not invent sources\n"
-            "- Remove unsupported claims\n\n"
-
-            "SOURCE DIVERSITY RULE:\n"
-            "- Use a wide range of references\n"
-            "- Avoid over-relying on a few sources\n\n"
-
-            "COVERAGE RULE:\n"
-            "- Ensure ALL major aspects are covered:\n"
-            "  • background\n"
-            "  • current state\n"
-            "  • applications\n"
-            "  • challenges\n"
-            "  • future trends\n\n"
-
-            "REFERENCE FORMATTING RULE:\n"
-            "- Format cleanly:\n"
-            "  [1] Title. Source, Year.\n"
-            "      URL: link\n"
-            "- No author spam\n"
-            "- No merging\n\n"
-
-            "REFERENCE CONSISTENCY RULE (FINAL FIX):\n"
-            "- Each UNIQUE URL must have ONE UNIQUE reference number\n"
-            "- Different URLs MUST have DIFFERENT reference numbers\n"
-            "- NEVER assign the same reference number to multiple different sources\n"
-            "- Reuse a reference number ONLY when the URL is EXACTLY identical\n\n"
-
-            "Write clearly, concisely, and with strong evidence."
+            "Synthesize the DETERMINISTICALLY VERIFIED evidence into a 2,000+ word manuscript.\n"
+            "Maintain 1:1 RAW URL integrity. Use only the highest-scoring sources."
         ),
-        backstory=(
-            "You are a principal analyst producing comprehensive, balanced, and well-cited research reports."
-        ),
+        backstory="You are a prize-winning technical correspondent specialized in translating complex, verified data into elite strategic reports.",
         llm=_build_llm(model, api_key, temperature=0.4),
         verbose=True,
-        allow_delegation=False,
-        memory=True,
-        max_iter=5,
-        max_execution_time=240,
-        max_rpm=3,
+        allow_delegation=False
     )
 
-
-# ── Builder ────────────────────────────────────────────────────────────────────
-
-def build_agents(model: str, api_key: str) -> tuple[Agent, Agent, Agent]:
-    scout    = build_research_scout(model, api_key)
-    searcher = build_web_searcher(model, api_key)
-    writer   = build_report_writer(model, api_key)
-    logger.info(
-        "Axiom agents ready — model: %s | Scout(temp=0.2) Searcher(temp=0.15) Writer(temp=0.4)",
-        model.split("/")[-1]
-    )
-    return scout, searcher, writer
+def build_agents(model: str, api_key: str, context=None) -> tuple[Agent, Agent, Agent, Agent, Agent]:
+    architect = build_research_architect(model, api_key)
+    scout     = build_research_scout(model, api_key)
+    searcher  = build_web_searcher(model, api_key, context=context)
+    reviewer  = build_research_reviewer(model, api_key)
+    writer    = build_report_writer(model, api_key)
+    
+    logger.info("Axiom v4 Engine Ready — Logic: Deterministic | Truth: Hard-Verified | Mode: High-Performance")
+    return architect, scout, searcher, reviewer, writer
 

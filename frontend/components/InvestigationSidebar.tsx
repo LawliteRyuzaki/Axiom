@@ -93,7 +93,7 @@ export default function InvestigationSidebar({ refreshKey, onNewSession, onSelec
           fontFamily: "var(--font-ui)",
           fontSize: "0.6rem",
           fontWeight: 600,
-          color: "var(--text-faint)",
+          color: "var(--text-muted)",
           textTransform: "uppercase",
           letterSpacing: "0.1em",
         }}>
@@ -123,7 +123,7 @@ export default function InvestigationSidebar({ refreshKey, onNewSession, onSelec
             <p style={{
               fontFamily: "var(--font-ui)",
               fontSize: "0.8125rem",
-              color: "var(--text-faint)",
+              color: "var(--text-muted)",
               lineHeight: 1.6,
             }}>
               No sessions yet
@@ -189,7 +189,7 @@ export default function InvestigationSidebar({ refreshKey, onNewSession, onSelec
                   <p style={{
                     fontFamily: "var(--font-mono)",
                     fontSize: "0.6rem",
-                    color: "var(--text-faint)",
+                    color: "var(--text-muted)",
                   }}>
                     {new Date(s.created_at).toLocaleDateString("en-GB", {
                       day: "2-digit",
@@ -214,7 +214,7 @@ export default function InvestigationSidebar({ refreshKey, onNewSession, onSelec
         <span style={{
           fontFamily: "var(--font-mono)",
           fontSize: "0.6rem",
-          color: "var(--text-faint)",
+          color: "var(--text-muted)",
         }}>
           {sessions.length} session{sessions.length !== 1 ? "s" : ""}
         </span>

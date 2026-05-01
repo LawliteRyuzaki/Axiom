@@ -1,5 +1,5 @@
 export type SSEEventType =
-  | "status" | "progress" | "log" | "query"
+  | "status" | "progress" | "log" | "reasoning" | "thought" | "query"
   | "report_chunk" | "complete" | "error";
 
 export interface SSEPayload {
@@ -34,6 +34,7 @@ export interface ResearchState {
   partial:   boolean;
   model:     string | null;
   goal:      string;
+  thoughts?: { id: number; text: string; type: "reasoning" | "thought" }[];
 }
 
 export interface SessionSummary {
