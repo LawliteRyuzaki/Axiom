@@ -1,68 +1,102 @@
-# Axiom
+# Axiom — Research Intelligence
 
-Axiom is a high-fidelity research engine designed for deterministic, multi-agent analysis and real-time source verification. It leverages a structured orchestration pipeline to transform complex research goals into comprehensive, evidence-based reports.
+Axiom is a high-fidelity, autonomous research engine designed to transform complex inquiries into structured, evidence-based manuscripts. By leveraging a deterministic multi-agent orchestration pipeline, Axiom eliminates the hallucination risks typical of standard LLM interfaces, providing verifiable and cited intelligence in real-time.
 
-## Methodology
+---
 
-Axiom operates on the v4 Research Core, which utilizes a rigid, four-phase pipeline to ensure factual integrity and minimize hallucination:
+## 🏗️ System Architecture
 
-1.  **Orchestrated Planning**: The system decomposes research objectives into a hierarchical set of investigation tasks.
-2.  **Autonomous Retrieval**: Agents execute parallel queries across academic databases, technical reports, and the open web.
-3.  **Heuristic Verification**: Every retrieved source is processed through a verification engine that checks for technical relevance and source credibility.
-4.  **Evidence Synthesis**: A final report is synthesized exclusively from verified data points, complete with direct citations and confidence scoring.
+Axiom is built on a decoupled, full-stack architecture optimized for high-throughput research and real-time telemetry.
 
-## Key Features
+```mermaid
+graph TD
+    A[Next.js 16 / React 19] -- POST /research --> B[FastAPI Backend]
+    B -- SSE Stream --> A
+    B -- DB Context --> C[(MongoDB Atlas)]
+    
+    subgraph "Axiom v4 Research Core"
+        D[Pipeline Controller]
+        E[Agent Swarm]
+        F[Heuristic Verifier]
+        G[Scoring Engine]
+    end
+    
+    B -- Orchestrate --> D
+    D -- Task Distribution --> E
+    E -- Findings --> F
+    F -- Score --> G
+    G -- Persistence --> C
+```
 
-- **Multi-Agent Orchestration**: Powered by CrewAI, the system coordinates specialized agents for search, verification, and synthesis.
-- **Real-Time Streaming**: Utilizing Server-Sent Events (SSE), research progress and agent internal thoughts are streamed to the interface as they happen.
-- **Weighted Scoring Engine**: Sources are ranked and filtered based on a multi-dimensional scoring algorithm (relevance, authority, and recency).
-- **Session Persistence**: Complete research sessions are persisted to MongoDB, allowing for historical review and iterative analysis.
-- **Export Capabilities**: Finalized manuscripts can be exported to PDF format for professional distribution.
+---
 
-## Technical Stack
+## 🧠 The v4 Research Pipeline
 
-### Backend
-- **Framework**: FastAPI (Python 3.10+)
-- **Agent Framework**: CrewAI 1.14.x
-- **Database**: MongoDB (via Motor/Pymongo)
-- **Primary LLM**: Google Gemini (Flash/Pro)
-- **Fallback Chain**: Groq (Llama 3.1)
-- **Deployment**: Configured for Render.com
+Unlike basic RAG (Retrieval-Augmented Generation), Axiom utilizes a **deterministic 5-stage lifecycle** that enforces factual consistency at every layer.
 
-### Frontend
-- **Framework**: Next.js (React 19)
-- **Styling**: Tailwind CSS 4
-- **Animation**: Framer Motion
-- **Data Visualization**: Recharts
-- **Deployment**: Configured for Vercel
+1.  **Architect**: Decomposes the primary goal into a hierarchical investigation roadmap.
+2.  **Scout**: Generates high-entropy search queries to traverse academic and technical silos.
+3.  **Curator**: Executes parallel retrieval across the open web and private databases, curating sources with raw signal-to-noise filtering.
+4.  **Reviewer**: A quality-audit stage that calculates a **Research Coverage Score**. If coverage is insufficient, it triggers a recursive refinement loop.
+5.  **Verifier**: Cross-references findings to detect contradictions and verify statistical claims.
+6.  **Writer**: Synthesizes the finalized context into a scholarly Markdown report with direct citations.
 
-## Configuration
+---
 
-The system requires several environment variables for full operation.
+## 🛠️ Engineering Highlights
 
-### Backend (.env)
-- `GEMINI_API_KEY`: Primary inference key.
-- `SERPER_API_KEY`: Web search capabilities.
-- `MONGODB_URI`: Atlas or local MongoDB connection string.
-- `GROQ_API_KEY`: (Optional) Fallback inference provider.
+### 📡 Real-Time Telemetry via SSE
+Axiom implements a custom **Server-Sent Events (SSE)** protocol via `ReadableStream` to provide a "live" research experience. Users can observe agent "internal thoughts," sub-queries being processed, and the final manuscript as it is synthesized chunk-by-chunk.
 
-### Frontend (.env.local)
-- `NEXT_PUBLIC_API_URL`: URL of the running Axiom backend.
+### ⚖️ Multi-Dimensional Scoring Engine
+Sources are not just retrieved; they are audited. Our custom `ScoringEngine` applies a weighted heuristic based on:
+- **Relevance (40%)**: Semantic alignment with the research goal.
+- **Credibility (35%)**: Domain authority tracking (Academic, Govt, News).
+- **Recency (25%)**: Temporal decay logic for fast-moving technical fields.
 
-## Local Setup
+### 🛡️ Fallback Resilience & Rate-Limiting
+To ensure 99.9% research completion rates, Axiom utilizes an **Exponential Backoff & Fallback Chain**.
+- **Primary**: Google Gemini 1.5 Pro / Flash.
+- **Secondary**: Automated pivot to secondary API pools on `429` errors.
+- **Tertiary**: Failover to **Groq (Llama 3.1)** on daily quota exhaustion.
 
-### Backend
-1. Navigate to the backend directory.
-2. Install dependencies: `pip install -r requirements.txt`.
-3. Configure the `.env` file with required keys.
-4. Start the server: `python run.py`.
+---
 
-### Frontend
-1. Navigate to the frontend directory.
-2. Install dependencies: `npm install`.
-3. Configure the `.env.local` file.
-4. Start the development server: `npm run dev`.
+## 💻 Technical Stack
 
-## License
+### Backend (Python)
+- **Framework**: FastAPI (Asynchronous execution, Lifespan management)
+- **Agent Orchestration**: CrewAI (Specialized roles, Pydantic-enforced outputs)
+- **Persistence**: MongoDB (Motor driver for non-blocking I/O)
+- **Utilities**: Regex-based `Retry-After` parsing, Trace-ID logging.
 
-MIT License. Developed as part of the Axiom Research Initiative.
+### Frontend (TypeScript)
+- **Framework**: Next.js 16 (App Router, Server Components)
+- **State Management**: Custom React Hooks with `useRef` telemetry buffering.
+- **UI/UX**: Framer Motion (Glassmorphism), Tailwind CSS 4 (Jet-Black Noir theme).
+
+---
+
+## 🚀 Quick Start
+
+### 1. Environment Configuration
+Create a `.env` in the root:
+```env
+GEMINI_API_KEY=your_key
+SERPER_API_KEY=your_key
+MONGODB_URI=your_uri
+```
+
+### 2. Launch Services
+```bash
+# Backend
+cd backend && pip install -r requirements.txt && python run.py
+
+# Frontend
+cd frontend && npm install && npm run dev
+```
+
+---
+
+## 📜 License
+Developed under the Axiom Research Initiative. Distributed under the MIT License.

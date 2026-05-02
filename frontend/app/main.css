@@ -69,25 +69,25 @@
 
 .dark {
   color-scheme: dark;
-  --bg: #020617;
-  --surface: #0F172A;
-  --sidebar-bg: #0B1120;
+  --bg: #000000;
+  --surface: #0A0A0A;
+  --sidebar-bg: #050505;
   
   --text-primary: #F8FAFC;
-  --text-secondary: #94A3B8;
-  --text-muted: #64748B;
-  --text-faint: #475569;
+  --text-secondary: #A1A1AA;
+  --text-muted: #71717A;
+  --text-faint: #52525B;
   
   --accent: #3B82F6;
   --accent-light: rgba(59, 130, 246, 0.1);
   --accent-soft: rgba(59, 130, 246, 0.05);
   
-  --border: #1E293B;
-  --border-med: #334155;
-  --border-light: #0F172A;
+  --border: #1A1A1A;
+  --border-med: #262626;
+  --border-light: #0D0D0D;
   
-  --glass-bg: rgba(15, 23, 42, 0.85);
-  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+  --glass-bg: rgba(0, 0, 0, 0.8);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
 }
 
 /* ── Base ───────────────────────────────────────────────────────────────── */
@@ -259,9 +259,9 @@ body {
 }
 
 .dark .search-bar {
-  background: #111;
-  border-color: #2a2a2a;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  background: #0D0D0D;
+  border-color: #262626;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.7);
 }
 
 .search-bar:focus-within {
