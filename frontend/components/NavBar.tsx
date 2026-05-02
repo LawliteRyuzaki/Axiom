@@ -2,15 +2,9 @@
 import { useState, useEffect } from "react";
 import AxiomLogo from "./AxiomLogo";
 import type { SessionStatus } from "@/types";
+import { useTheme } from "@/hooks/useTheme";
+import { STATUS_CONFIG } from "@/utils/status";
 
-const S: Record<SessionStatus, { dot: string; label: string }> = {
-  idle:      { dot: "var(--border-med)",  label: "Ready"    },
-  queued:    { dot: "var(--term-amber)",  label: "Queued"   },
-  running:   { dot: "var(--term-green)",  label: "Running"  },
-  completed: { dot: "var(--term-green)",  label: "Complete" },
-  partial:   { dot: "var(--term-amber)",  label: "Partial"  },
-  failed:    { dot: "var(--term-red)",    label: "Error"    },
-};
 
 interface Props {
   status: SessionStatus;
@@ -21,23 +15,8 @@ interface Props {
 }
 
 export default function NavBar({ status, onLogoClick, onHubClick, sessionTitle, showNav }: Props) {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  const s = S[status] ?? S.idle;
-
-  useEffect(() => {
-    const saved = localStorage.getItem("axiom-theme") as "light" | "dark";
-    if (saved) {
-      setTheme(saved);
-      document.documentElement.classList.toggle("dark", saved === "dark");
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    const next = theme === "light" ? "dark" : "light";
-    setTheme(next);
-    localStorage.setItem("axiom-theme", next);
-    document.documentElement.classList.toggle("dark", next === "dark");
-  };
+  const { theme, toggleTheme } = useTheme();
+  const s = STATUS_CONFIG[status] ?? STATUS_CONFIG.idle;
 
   const logoTooltip = showNav ? "Toggle sessions panel" : "View research history";
 

@@ -14,6 +14,7 @@ class ResearchRequest(BaseModel):
         description="The research goal or question to investigate",
         examples=["What are the latest advancements in quantum computing for cryptography?"],
     )
+    model: Optional[str] = "flash"
 
 
 class ResearchSession(BaseModel):
@@ -28,6 +29,7 @@ class ResearchSession(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     completed_at: Optional[datetime] = None
     duration_seconds: Optional[float] = None
+    model: Optional[str] = None
 
 
 class SessionSummary(BaseModel):
@@ -59,10 +61,3 @@ class SSEEvent(BaseModel):
     session_id: Optional[str] = None
 
 
-# ── Search cache model ────────────────────────────────────────────────────────
-
-class CachedSearch(BaseModel):
-    query_hash: str
-    query: str
-    results: list[dict]
-    created_at: datetime = Field(default_factory=datetime.utcnow)

@@ -140,10 +140,12 @@ def build_report_writer(model: str, api_key: str) -> Agent:
     return Agent(
         role="Principal Research Correspondent",
         goal=(
-            "Synthesize the DETERMINISTICALLY VERIFIED evidence into a 2,000+ word manuscript.\n"
-            "Maintain 1:1 RAW URL integrity. Use only the highest-scoring sources."
+            "Write a comprehensive, well-structured research report on the given topic.\n"
+            "Prioritize the verified sources provided. Where source coverage is limited, "
+            "draw on your expert knowledge — but always distinguish cited evidence from synthesis.\n"
+            "Never refuse to write. Always produce a complete, structured report."
         ),
-        backstory="You are a prize-winning technical correspondent specialized in translating complex, verified data into elite strategic reports.",
+        backstory="You are a prize-winning technical correspondent and domain expert. You synthesize verified evidence and expert knowledge into elite research manuscripts. You always deliver a complete report, even when source coverage is partial.",
         llm=_build_llm(model, api_key, temperature=0.4),
         verbose=True,
         allow_delegation=False

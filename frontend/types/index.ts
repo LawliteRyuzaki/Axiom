@@ -40,7 +40,7 @@ export interface ResearchState {
 export interface SessionSummary {
   id:               string;
   goal:             string;
-  status:           string;
+  status:           SessionStatus;
   partial:          boolean;
   created_at:       string;
   duration_seconds: number | null;

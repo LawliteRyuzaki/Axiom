@@ -33,10 +33,12 @@ def _build_tasks(goal: str, architect, scout, curator, reviewer, correspondent) 
             "1. Iterate through EVERY query provided by the scout.\n"
             "2. For EACH query, execute 'axiom_deep_search' to find primary sources.\n"
             "3. Collect all candidate URLs and run 'axiom_batch_verifier' to confirm technical truth.\n"
-            "MANDATORY: You must return a detailed report of verified findings. "
-            "If no data is found, explicitly state 'NO VERIFIED DATA FOUND'."
+            "4. Summarize all findings — both verified and unverified — in a structured report.\n"
+            "MANDATORY: You must return a detailed report of findings with their URLs and confidence scores. "
+            "Report MEDIUM and HIGH confidence findings prominently. Even if confidence is LOW, "
+            "include the source so the writer can make an informed judgment."
         ),
-        expected_output="A comprehensive list of verified findings with live URLs and truth scores.",
+        expected_output="A comprehensive list of findings with live URLs, confidence labels, and key excerpts.",
         agent=curator,
         context=[scout_task],
     )
@@ -55,10 +57,15 @@ def _build_tasks(goal: str, architect, scout, curator, reviewer, correspondent) 
     writer_task = Task(
         description=(
             f"Original research goal: {goal}\n\n"
-            "Synthesize the DETERMINISTICALLY VERIFIED evidence into a professional report. "
-            "Maintain 1:1 RAW URL integrity. No hallucination."
+            "Write a comprehensive, professional research report on this topic. "
+            "Use the verified sources and findings provided by the curator as primary citations. "
+            "Where source coverage is limited, supplement with your expert knowledge on the topic — "
+            "but clearly distinguish between cited evidence and expert synthesis. "
+            "Structure: Executive Summary, Introduction, Technical Analysis, Key Findings, "
+            "Challenges & Limitations, Future Directions, References. "
+            "Target 1,500–3,000 words. Use markdown headings. Cite URLs inline as [N]."
         ),
-        expected_output="A high-fidelity research manuscript with 100% verified citations.",
+        expected_output="A well-structured, 1,500+ word research manuscript with inline citations.",
         agent=correspondent,
         context=[architect_task, curator_task, reviewer_task],
     )

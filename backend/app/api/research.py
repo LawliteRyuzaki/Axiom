@@ -12,13 +12,12 @@ import time
 from datetime import datetime
 from typing import AsyncGenerator
 
-from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, HTTPException, Request
 from sse_starlette.sse import EventSourceResponse
 
 from app.agents.crew import run_research_crew
-from app.core.database import get_db
 from app.core.logging import logger
+from app.services.session_service import SessionService
 from app.models.schemas import (
     ResearchRequest,
     ResearchSession,
@@ -53,11 +52,8 @@ async def start_research(request: ResearchRequest):
       complete      → Final JSON: {session_id, duration, partial}
       error         → Error message string
     """
-    db = get_db()
-
-    # Create session record in MongoDB
-    session = ResearchSession(goal=request.goal)
-    await db.research_sessions.insert_one(session.model_dump())
+    # Create session record via Service
+    session = await SessionService.create_session(request.goal, request.model)
     logger.info("New research session %s: %s", session.id, request.goal[:60])
 
     report_chunks: list[str] = []
@@ -100,22 +96,18 @@ async def start_research(request: ResearchRequest):
             final_status = "failed"
 
         finally:
-            # Persist final session state to MongoDB
+            # Persist final session state via Service
             duration = round(time.monotonic() - start_time, 1)
             full_report = "".join(report_chunks)
-            await db.research_sessions.update_one(
-                {"id": session.id},
-                {
-                    "$set": {
-                        "status": final_status,
-                        "report": full_report if full_report else None,
-                        "sub_queries": sub_queries,
-                        "partial": partial,
-                        "completed_at": datetime.utcnow(),
-                        "duration_seconds": duration,
-                    }
-                },
-            )
+            
+            await SessionService.update_session(session.id, {
+                "status": final_status,
+                "report": full_report if full_report else None,
+                "sub_queries": sub_queries,
+                "partial": partial,
+                "duration_seconds": duration,
+            })
+            
             logger.info(
                 "Session %s finished — status: %s, duration: %.1fs",
                 session.id, final_status, duration,
@@ -134,23 +126,13 @@ async def start_research(request: ResearchRequest):
 @router.get("/history", response_model=list[SessionSummary])
 async def get_history(limit: int = 20, skip: int = 0):
     """Return a paginated list of past research sessions (newest first)."""
-    db = get_db()
-    cursor = (
-        db.research_sessions
-        .find({}, {"_id": 0, "id": 1, "goal": 1, "status": 1, "partial": 1, "created_at": 1, "duration_seconds": 1})
-        .sort("created_at", -1)
-        .skip(skip)
-        .limit(min(limit, 50))
-    )
-    sessions = await cursor.to_list(length=50)
-    return sessions
+    return await SessionService.get_history(limit, skip)
 
 
 @router.get("/history/{session_id}", response_model=ResearchSession)
 async def get_session(session_id: str):
     """Retrieve a specific research session by ID."""
-    db = get_db()
-    doc = await db.research_sessions.find_one({"id": session_id}, {"_id": 0})
+    doc = await SessionService.get_session(session_id)
     if not doc:
         raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
     return doc

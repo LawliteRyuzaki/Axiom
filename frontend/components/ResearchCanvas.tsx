@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useRef, useState, memo, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { motion, AnimatePresence } from "framer-motion";
@@ -260,7 +260,7 @@ function stripInlineMarkdown(text: string): string {
 
 // ── Reasoning Trace Component ──────────────────────────────────────────────────
 
-function ReasoningTrace({ thoughts }: { thoughts: ResearchState["thoughts"] }) {
+const ReasoningTrace = memo(function ReasoningTrace({ thoughts }: { thoughts: ResearchState["thoughts"] }) {
   if (!thoughts || thoughts.length === 0) return null;
 
   return (
@@ -318,9 +318,12 @@ function ReasoningTrace({ thoughts }: { thoughts: ResearchState["thoughts"] }) {
       </div>
     </div>
   );
-}
+});
 
 // ── Main Component ─────────────────────────────────────────────────────────────
+
+const MemoizedReportAnalytics = memo(ReportAnalytics);
+const MemoizedTableOfContents = memo(TableOfContents);
 
 export default function ResearchCanvas({ state }: { state: ResearchState }) {
   const { report, status, duration, partial, model, sessionId, error, goal, thoughts } = state;
@@ -329,6 +332,8 @@ export default function ResearchCanvas({ state }: { state: ResearchState }) {
   const hasToc      = report.split("\n").filter(l => l.startsWith("##")).length >= 2;
   const endRef      = useRef<HTMLDivElement>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+
+  const mdComponents: Components = useMemo(() => md, []);
 
   const downloadMarkdown = () => {
     const a = document.createElement("a");
@@ -413,12 +418,12 @@ export default function ResearchCanvas({ state }: { state: ResearchState }) {
         )}
 
         {/* ── TOC ──────────────────────────────────────────────────── */}
-        {hasToc && <TableOfContents markdown={report} />}
+        {hasToc && <MemoizedTableOfContents markdown={report} />}
 
         {/* ── Report Body ───────────────────────────────────────────── */}
         {report.length > 0 && (
           <div className="report-prose">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={md}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
               {report}
             </ReactMarkdown>
             {isStreaming && <span className="streaming-cursor" />}
@@ -426,7 +431,7 @@ export default function ResearchCanvas({ state }: { state: ResearchState }) {
         )}
 
         {/* ── Analytics ────────────────────────────────────────────── */}
-        <ReportAnalytics state={state} />
+        <MemoizedReportAnalytics state={state} />
 
         {/* ── Error State ──────────────────────────────────────────── */}
         {status === "failed" && error && (

@@ -54,7 +54,7 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=settings.origins_list,
         allow_credentials=True,
-        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_methods=["*"],
         allow_headers=["*"],
         expose_headers=["X-Session-ID"],
     )

@@ -1,8 +1,10 @@
 "use client";
 import { useCallback, useRef, useState } from "react";
 import type { ResearchState, SSEPayload, LogEntry, SelectedModel } from "@/types";
+import { classifyLog } from "@/utils/status";
+import { API_URL } from "@/lib/api";
+import { streamResearch } from "@/lib/sse";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 const INITIAL: ResearchState = {
   sessionId: null,
@@ -20,20 +22,6 @@ const INITIAL: ResearchState = {
 
 let _id = 0;
 
-function classifyLog(text: string): LogEntry["level"] {
-  const t = text.toLowerCase();
-  if (t.startsWith("error") || t.includes("failed") || t.includes("fatal")) return "error";
-  if (t.includes("warning") || t.includes("quota") || t.includes("rate limit")) return "warn";
-  if (
-    t.includes("complete") || t.includes("success") ||
-    t.includes("ready") || t.includes("finalised")
-  ) return "success";
-  if (
-    t.includes("axiom") || t.includes("model selected") ||
-    t.includes("starting") || t.includes("session")
-  ) return "dim";
-  return "default";
-}
 
 function mkLog(text: string): LogEntry {
   return {
@@ -58,57 +46,34 @@ export function useResearch() {
     reportRef.current = "";
     setState({ ...INITIAL, status: "queued", goal });
 
-    try {
-      const res = await fetch(`${API_URL}/api/research`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        // model is included in the payload so the backend can route accordingly
-        body: JSON.stringify({ goal, model }),
-      });
-
-      if (!res.ok) {
-        const e = await res.json().catch(() => ({}));
-        throw new Error(e?.detail ?? `Server error ${res.status}`);
+    await streamResearch(
+      `${API_URL}/api/research`,
+      goal,
+      model,
+      (payload) => handle(payload),
+      (msg) => {
+        setState(p => ({
+          ...p,
+          status: "failed",
+          error:  msg,
+          logs:   [...p.logs, mkLog(`ERROR: ${msg}`)],
+        }));
       }
-      if (!res.body) throw new Error("No response body");
-
-      const reader  = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const lines = buf.split("\n");
-        buf = lines.pop() ?? "";
-        for (const line of lines) {
-          if (!line.startsWith("data:")) continue;
-          const raw = line.slice(5).trim();
-          if (!raw) continue;
-          try { handle(JSON.parse(raw) as SSEPayload); } catch { /* skip malformed */ }
-        }
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
-      setState(p => ({
-        ...p,
-        status: "failed",
-        error:  msg,
-        logs:   [...p.logs, mkLog(`ERROR: ${msg}`)],
-      }));
-    }
+    );
   }, []);
 
   // ── Load a past session from history (GET) ────────────────────────────────
   const loadSession = useCallback(async (id: string) => {
     reportRef.current = "";
+    // Set to queued while loading to show spinner
     setState(p => ({ ...p, status: "queued", sessionId: id }));
 
     try {
+
       const res = await fetch(`${API_URL}/api/history/${id}`);
       if (!res.ok) throw new Error(`History fetch failed: ${res.status}`);
       const doc = await res.json();
+
 
       reportRef.current = doc.report ?? "";
       setState({
@@ -123,11 +88,13 @@ export function useResearch() {
         error:     doc.error ?? null,
         duration:  doc.duration_seconds ?? null,
         partial:   doc.partial ?? false,
-        model:     null,
+        model:     doc.model ?? null,
         goal:      doc.goal ?? "",
+        thoughts:  [], // History doesn't persist thoughts yet
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to load session";
+
       setState(p => ({
         ...p,
         status: "failed",

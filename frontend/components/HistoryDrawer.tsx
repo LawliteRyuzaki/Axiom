@@ -2,26 +2,13 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { SessionSummary } from "@/types";
+import { STATUS_CONFIG } from "@/utils/status";
+import { formatRelativeDate } from "@/utils/date";
+import { API_URL } from "@/lib/api";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 const EASING = [0.22, 1, 0.36, 1] as const;
 
-const STATUS_DOT: Record<string, string> = {
-  completed: "var(--term-green)",
-  partial:   "var(--term-amber)",
-  failed:    "var(--term-red)",
-  running:   "var(--accent)",
-  queued:    "var(--term-amber)",
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  completed: "Complete",
-  partial:   "Partial",
-  failed:    "Failed",
-  running:   "Running",
-  queued:    "Queued",
-};
 
 interface Props {
   open: boolean;
@@ -77,15 +64,6 @@ export default function HistoryDrawer({ open, onClose, onSelect, onNewSession }:
     s.goal.toLowerCase().includes(search.toLowerCase())
   );
 
-  const formatDate = (iso: string) => {
-    const d = new Date(iso);
-    const now = new Date();
-    const diffDays = Math.floor((now.getTime() - d.getTime()) / 86_400_000);
-    if (diffDays === 0) return "Today";
-    if (diffDays === 1) return "Yesterday";
-    if (diffDays < 7)  return `${diffDays} days ago`;
-    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-  };
 
   return (
     <AnimatePresence>
@@ -387,7 +365,7 @@ export default function HistoryDrawer({ open, onClose, onSelect, onNewSession }:
                           width:        6,
                           height:       6,
                           borderRadius: "50%",
-                          background:   STATUS_DOT[s.status] ?? "var(--border-med)",
+                          background:   STATUS_CONFIG[s.status]?.dot ?? "var(--border-med)",
                           flexShrink:   0,
                         }} />
                         <span style={{
@@ -397,7 +375,7 @@ export default function HistoryDrawer({ open, onClose, onSelect, onNewSession }:
                           textTransform: "uppercase",
                           letterSpacing: "0.07em",
                         }}>
-                          {STATUS_LABEL[s.status] ?? s.status}
+                          {STATUS_CONFIG[s.status]?.label ?? s.status}
                         </span>
                       </div>
 
@@ -407,7 +385,7 @@ export default function HistoryDrawer({ open, onClose, onSelect, onNewSession }:
                         fontSize:   "0.6rem",
                         color:      "var(--text-faint)",
                       }}>
-                        {formatDate(s.created_at)}
+                        {formatRelativeDate(s.created_at)}
                       </span>
 
                       {/* Duration */}

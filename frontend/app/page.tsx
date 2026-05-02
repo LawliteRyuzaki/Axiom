@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useResearch } from "@/hooks/useResearch";
 import NavBar from "@/components/NavBar";
@@ -11,67 +11,102 @@ import HistoryDrawer from "@/components/HistoryDrawer";
 import type { SelectedModel, AppView } from "@/types";
 
 const EASING = [0.22, 1, 0.36, 1] as const;
+const isMobile = () => typeof window !== "undefined" && window.innerWidth <= 1024;
 
 export default function AxiomApp() {
   const { state, startResearch, loadSession, reset } = useResearch();
 
-  const [view,            setView]            = useState<AppView>("landing");
-  const [historyKey,      setHistoryKey]      = useState(0);
-  const [selectedModel,   setSelectedModel]   = useState<SelectedModel>("flash");
-  const [sidebarOpen,     setSidebarOpen]     = useState(true);
-  const [hubOpen,         setHubOpen]         = useState(false);
-  const [drawerOpen,      setDrawerOpen]      = useState(false);
+  const [view,          setView]          = useState<AppView>("landing");
+  const [historyKey,    setHistoryKey]    = useState(0);
+  const [selectedModel, setSelectedModel] = useState<SelectedModel>("flash");
+  const [sidebarOpen,   setSidebarOpen]   = useState(false);
+  const [hubOpen,       setHubOpen]       = useState(false);
+  const [drawerOpen,    setDrawerOpen]    = useState(false);
+  const [isMobileLayout, setIsMobileLayout] = useState(false);
 
-  // ── Start new research ───────────────────────────────────────────────────
+  // Detect screen size
+  useEffect(() => {
+    const check = () => setIsMobileLayout(window.innerWidth <= 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  // When entering research view, set sidebar based on screen size
+  useEffect(() => {
+    if (view === "research") {
+      if (!isMobileLayout) {
+        setSidebarOpen(true);
+        setHubOpen(true);
+      } else {
+        setSidebarOpen(false);
+        setHubOpen(false);
+      }
+    }
+  // Only run when view changes or mobile layout changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, isMobileLayout]);
+
+  // ── Start new research ─────────────────────────────────────────────────
   const handleSubmit = useCallback((goal: string, model: SelectedModel) => {
     setView("research");
-    setSidebarOpen(window.innerWidth > 1024);
-    setHubOpen(false);
     setDrawerOpen(false);
     startResearch(goal, model);
   }, [startResearch]);
 
-  // ── Reset to landing ─────────────────────────────────────────────────────
+  // ── Reset to landing ───────────────────────────────────────────────────
   const handleNewSession = useCallback(() => {
     reset();
     setView("landing");
     setDrawerOpen(false);
+    setSidebarOpen(false);
     setHubOpen(false);
     setHistoryKey(k => k + 1);
   }, [reset]);
 
-  // ── Logo click behaviour ──────────────────────────────────────────────────
+  // ── Logo click: toggle sidebar in research / toggle drawer on landing ──
   const handleLogoClick = useCallback(() => {
     if (view === "research") {
-      setSidebarOpen(v => !v);
-      if (window.innerWidth <= 1024) setHubOpen(false);
+      setSidebarOpen(v => {
+        const next = !v;
+        if (next && isMobile()) setHubOpen(false); // close hub on mobile when opening sidebar
+        return next;
+      });
     } else {
       setDrawerOpen(v => !v);
     }
   }, [view]);
 
-  // ── Hub toggle (mobile only) ──────────────────────────────────────────────
+  // ── Hub toggle ─────────────────────────────────────────────────────────
   const handleHubClick = useCallback(() => {
-    setHubOpen(v => !v);
-    if (window.innerWidth <= 1024) setSidebarOpen(false);
+    setHubOpen(v => {
+      const next = !v;
+      if (next && isMobile()) setSidebarOpen(false); // close sidebar on mobile when opening hub
+      return next;
+    });
   }, []);
 
-  // ── Load a past session (from sidebar OR from the history drawer) ─────────
+  // ── Select history session ─────────────────────────────────────────────
   const handleSelectSession = useCallback((id: string) => {
     setDrawerOpen(false);
+    if (isMobile()) {
+      setSidebarOpen(false);
+      setHubOpen(false);
+    }
     setView("research");
     loadSession(id);
   }, [loadSession]);
 
-  // Session title for the nav bar
   const sessionTitle = state.goal
-    ? (state.goal.length > 72 ? state.goal.slice(0, 72) + "…" : state.goal)
+    ? (state.goal.length > 68 ? state.goal.slice(0, 68) + "…" : state.goal)
     : undefined;
+
+  const showBackdrop = isMobileLayout && (sidebarOpen || hubOpen);
 
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
-      {/* ── History drawer — available from any view ─────────────────────── */}
+      {/* ── Global history drawer ────────────────────────────────────────── */}
       <HistoryDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
@@ -79,7 +114,7 @@ export default function AxiomApp() {
         onNewSession={handleNewSession}
       />
 
-      {/* ── Glass nav ──────────────────────────────────────────────────────── */}
+      {/* ── Persistent glass nav (always visible) ───────────────────────── */}
       <NavBar
         status={state.status}
         onLogoClick={handleLogoClick}
@@ -88,14 +123,16 @@ export default function AxiomApp() {
         showNav={view === "research"}
       />
 
-      {/* ── LANDING ────────────────────────────────────────────────────────── */}
+      {/* ── Views ───────────────────────────────────────────────────────── */}
       <AnimatePresence mode="wait">
+
+        {/* LANDING */}
         {view === "landing" && (
           <motion.div
             key="landing"
             initial={{ opacity: 1 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.3, ease: "easeIn" }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.25, ease: "easeIn" }}
             style={{ flex: 1, overflow: "hidden" }}
           >
             <LandingView
@@ -107,26 +144,40 @@ export default function AxiomApp() {
           </motion.div>
         )}
 
-        {/* ── RESEARCH 3-COLUMN ──────────────────────────────────────────── */}
+        {/* RESEARCH — 3-column layout */}
         {view === "research" && (
           <motion.div
             key="research"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3, ease: EASING }}
             className="app-wrap"
           >
-            {/* Left sidebar — slides in from left, toggled by logo */}
+            {/* Mobile backdrop — tap to close drawers */}
+            {showBackdrop && (
+              <div
+                onClick={() => { setSidebarOpen(false); setHubOpen(false); }}
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  background: "rgba(0,0,0,0.4)",
+                  backdropFilter: "blur(3px)",
+                  zIndex: 150,
+                }}
+              />
+            )}
+
+            {/* Left: history sidebar */}
             <AnimatePresence initial={false}>
               {sidebarOpen && (
                 <motion.div
                   key="sidebar"
-                  initial={{ x: -240, opacity: 0 }}
+                  initial={{ x: -285, opacity: 0 }}
                   animate={{ x: 0,    opacity: 1 }}
-                  exit={{ x: -240,    opacity: 0 }}
-                  transition={{ duration: 0.38, ease: EASING }}
-                  style={{ display: "flex", flexShrink: 0 }}
-                  className="mobile-active" // handled by media queries
+                  exit={{ x: -285,    opacity: 0 }}
+                  transition={{ duration: 0.32, ease: EASING }}
+                  style={{ flexShrink: 0, zIndex: isMobileLayout ? 200 : 10 }}
                 >
                   <InvestigationSidebar
                     refreshKey={historyKey}
@@ -137,33 +188,29 @@ export default function AxiomApp() {
               )}
             </AnimatePresence>
 
-            {/* Center canvas */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.99 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, ease: EASING, delay: 0.12 }}
+            {/* Center: report canvas */}
+            <div
               className="canvas-panel"
               onClick={() => {
-                if (window.innerWidth <= 1024) {
+                if (isMobileLayout) {
                   setSidebarOpen(false);
                   setHubOpen(false);
                 }
               }}
             >
               <ResearchCanvas state={state} />
-            </motion.div>
+            </div>
 
-            {/* Right agent hub */}
-            <AnimatePresence>
-              {(hubOpen || window.innerWidth > 1024) && (
+            {/* Right: agent hub */}
+            <AnimatePresence initial={false}>
+              {hubOpen && (
                 <motion.div
                   key="hub"
-                  initial={{ x: 300, opacity: 0 }}
+                  initial={{ x: 320, opacity: 0 }}
                   animate={{ x: 0,   opacity: 1 }}
-                  exit={{ x: 300,    opacity: 0 }}
-                  transition={{ duration: 0.4, ease: EASING }}
-                  style={{ display: "flex", flexShrink: 0 }}
-                  className={hubOpen ? "mobile-active" : ""}
+                  exit={{ x: 320,    opacity: 0 }}
+                  transition={{ duration: 0.32, ease: EASING }}
+                  style={{ flexShrink: 0, zIndex: isMobileLayout ? 200 : 10 }}
                 >
                   <AgentHub state={state} />
                 </motion.div>

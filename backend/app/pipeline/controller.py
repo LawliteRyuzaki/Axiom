@@ -51,12 +51,12 @@ class ResearchPipeline:
                     
                     # --- STAGE 1: ARCHITECT ---
                     architect_crew = Crew(agents=[agents[0]], tasks=[tasks[0]], verbose=True)
-                    await loop.run_in_executor(None, architect_crew.kickoff)
+                    await architect_crew.kickoff_async()
                     if emitter: await emitter("log", "Stage 1: Research roadmap finalized.")
 
                     # --- STAGE 2: SCOUT ---
                     scout_crew = Crew(agents=[agents[1]], tasks=[tasks[1]], verbose=True)
-                    scout_result = await loop.run_in_executor(None, scout_crew.kickoff)
+                    scout_result = await scout_crew.kickoff_async()
                     
                     try:
                         # Axiom v4: Robust JSON extraction (handles both Pydantic and raw text filler)
@@ -82,7 +82,7 @@ class ResearchPipeline:
 
                     # --- STAGE 3: SEARCHER / CURATOR ---
                     curator_crew = Crew(agents=[agents[2]], tasks=[tasks[2]], verbose=True)
-                    await loop.run_in_executor(None, curator_crew.kickoff)
+                    await curator_crew.kickoff_async()
                     
                     # Verify findings in context
                     all_findings = await self.context.get_all_findings()
@@ -90,7 +90,7 @@ class ResearchPipeline:
 
                     # --- STAGE 4: REVIEWER ---
                     reviewer_crew = Crew(agents=[agents[3]], tasks=[tasks[3]], verbose=True)
-                    discovery_result = await loop.run_in_executor(None, reviewer_crew.kickoff)
+                    discovery_result = await reviewer_crew.kickoff_async()
                     
                     # Deterministic Decision Logic (Rebalanced v4)
                     verified_findings = [f for f in all_findings if f.confidence in ["HIGH", "MEDIUM"]]
@@ -143,7 +143,7 @@ class ResearchPipeline:
                 
                 writer_task = tasks[4]
                 synthesis_crew = Crew(agents=[agents[4]], tasks=[writer_task], verbose=True)
-                final_report = await loop.run_in_executor(None, synthesis_crew.kickoff)
+                final_report = await synthesis_crew.kickoff_async()
                 
                 total_duration = round(time.monotonic() - self.start_time, 2)
                 logger.info(f"[{self.trace_id}] Research complete. Total duration: {total_duration}s")
