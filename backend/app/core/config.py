@@ -50,6 +50,8 @@ class Settings(BaseSettings):
     app_version: str = "4.0.0"
     research_max_iterations: int = 3
     scoring_threshold: float = 0.6
+    rate_limit_requests_per_minute: int = 15
+    max_tokens_per_session: int = 150000
 
     # ── Derived ───────────────────────────────────────────────────────────────
     @property

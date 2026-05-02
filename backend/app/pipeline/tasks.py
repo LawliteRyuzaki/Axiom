@@ -2,7 +2,7 @@ from crewai import Task
 from typing import Tuple
 from app.models.structured import ScoutQueries
 
-def _build_tasks(goal: str, architect, scout, curator, reviewer, correspondent) -> Tuple[Task, Task, Task, Task, Task]:
+def _build_tasks(goal: str, architect, scout, curator, reviewer, verifier, correspondent) -> Tuple[Task, Task, Task, Task, Task, Task]:
     """
     Axiom v4 Centralized Task Builder.
     Decoupled from orchestrator to prevent circular imports.
@@ -54,6 +54,18 @@ def _build_tasks(goal: str, architect, scout, curator, reviewer, correspondent) 
         context=[curator_task],
     )
 
+    verifier_task = Task(
+        description=(
+            "Execute a cross-source factual consistency check. "
+            "Examine all findings from the curator and identify any contradictions. "
+            "Verify that all claims are backed by at least one high-confidence source. "
+            "Structure the citations for final reporting."
+        ),
+        expected_output="A list of factual consistency flags and a refined source-claim mapping.",
+        agent=verifier,
+        context=[curator_task, reviewer_task],
+    )
+
     writer_task = Task(
         description=(
             f"Original research goal: {goal}\n\n"
@@ -67,7 +79,7 @@ def _build_tasks(goal: str, architect, scout, curator, reviewer, correspondent) 
         ),
         expected_output="A well-structured, 1,500+ word research manuscript with inline citations.",
         agent=correspondent,
-        context=[architect_task, curator_task, reviewer_task],
+        context=[architect_task, curator_task, verifier_task],
     )
 
-    return architect_task, scout_task, curator_task, reviewer_task, writer_task
+    return architect_task, scout_task, curator_task, reviewer_task, verifier_task, writer_task

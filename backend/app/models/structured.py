@@ -31,12 +31,20 @@ class ResearchIteration(BaseModel):
     reviewer_feedback: Optional[str] = None
     gaps_identified: List[str] = []
 
+class ReviewerDecision(BaseModel):
+    decision: str = Field(..., description="GO or REFINE")
+    reasoning: str = Field(..., description="Explanation for the decision")
+    gap_queries: List[str] = Field(default=[], description="New queries if REFINE is chosen")
+    coverage_percent: float = Field(default=0.0, ge=0.0, le=1.0)
+
 class AxiomSessionState(BaseModel):
     goal: str
     roadmap: List[str] = []
     iterations: List[ResearchIteration] = []
     final_findings: List[AxiomFinding] = []
     total_token_usage: int = 0
+    total_cost: float = 0.0
+    model_usage: Dict[str, int] = {}  # model_name -> token_count
     start_time: datetime = Field(default_factory=datetime.now)
     end_time: Optional[datetime] = None
 

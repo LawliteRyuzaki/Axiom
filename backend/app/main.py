@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.core.database import connect_db, disconnect_db
 from app.core.logging import logger
 from app.api.research import router as research_router
+from app.middleware.rate_limiter import RateLimiterMiddleware
 
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
@@ -58,6 +59,9 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
         expose_headers=["X-Session-ID"],
     )
+
+    # ── Rate Limiting ─────────────────────────────────────────────────────────
+    app.add_middleware(RateLimiterMiddleware)
 
     # ── Global exception handler ──────────────────────────────────────────────
     @app.exception_handler(Exception)

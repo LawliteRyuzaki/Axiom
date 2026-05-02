@@ -104,19 +104,29 @@ class MultiSourceRetriever:
         headers = {"X-API-KEY": self.serper_key, "Content-Type": "application/json"}
         try:
             resp = await self.client.post(url, headers=headers, json={"q": query, "num": 10})
+            resp.raise_for_status()
             data = resp.json()
+            
+            if not isinstance(data, dict):
+                logger.error(f"Invalid Serper response format: {type(data)}")
+                return []
+
             findings = []
             for r in data.get("organic", []):
+                if not r.get("link"): continue
                 findings.append({
-                    "title": r.get("title"),
+                    "title": r.get("title", "No Title"),
                     "url": r.get("link"),
                     "snippet": r.get("snippet", ""),
                     "year": self._extract_year(r.get("snippet", "") + r.get("title", "")),
                     "source_type": "web"
                 })
             return findings
+        except httpx.HTTPStatusError as e:
+            logger.error(f"Serper API Status Error: {e.response.status_code} - {e.response.text}")
+            return []
         except Exception as e:
-            logger.error(f"Serper error: {e}")
+            logger.error(f"Serper unexpected error: {e}")
             return []
 
     async def _search_arxiv(self, query: str) -> List[Dict[str, Any]]:

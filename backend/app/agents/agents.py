@@ -5,6 +5,7 @@ from crewai_tools import SerperDevTool
 from crewai.tools import BaseTool
 from app.core.config import get_settings
 from app.core.logging import logger
+from app.models.structured import ScoutQueries, ReviewerDecision
 
 GEMINI_FALLBACK_CHAIN = [
     "gemini/gemini-2.0-flash",
@@ -98,7 +99,8 @@ def build_research_scout(model: str, api_key: str) -> Agent:
         ),
         llm=_build_llm(model, api_key, temperature=0.1),
         verbose=True,
-        allow_delegation=False
+        allow_delegation=False,
+        output_pydantic=ScoutQueries
     )
 
 def build_web_searcher(model: str, api_key: str, context=None) -> Agent:
@@ -133,7 +135,8 @@ def build_research_reviewer(model: str, api_key: str) -> Agent:
         backstory="You are the lead editor for a premier scientific journal, known for a zero-tolerance policy on data gaps.",
         llm=_build_llm(model, api_key, temperature=0.1),
         verbose=True,
-        allow_delegation=False
+        allow_delegation=False,
+        output_pydantic=ReviewerDecision
     )
 
 def build_report_writer(model: str, api_key: str) -> Agent:
@@ -151,13 +154,32 @@ def build_report_writer(model: str, api_key: str) -> Agent:
         allow_delegation=False
     )
 
-def build_agents(model: str, api_key: str, context=None) -> tuple[Agent, Agent, Agent, Agent, Agent]:
+def build_source_verifier(model: str, api_key: str) -> Agent:
+    return Agent(
+        role="Lead Fact-Checker",
+        goal=(
+            "Cross-reference all verified findings for factual consistency.\n"
+            "Identify and flag any contradictions or outdated information.\n"
+            "Ensure citations are correctly mapped to claims."
+        ),
+        backstory=(
+            "You are a meticulous fact-checker for a high-stakes intelligence brief. "
+            "Your job is to ensure that even verified sources don't contradict each other "
+            "without explanation. You are the final shield against subtle hallucinations."
+        ),
+        llm=_build_llm(model, api_key, temperature=0.1),
+        verbose=True,
+        allow_delegation=False
+    )
+
+def build_agents(model: str, api_key: str, context=None) -> tuple[Agent, Agent, Agent, Agent, Agent, Agent]:
     architect = build_research_architect(model, api_key)
     scout     = build_research_scout(model, api_key)
     searcher  = build_web_searcher(model, api_key, context=context)
     reviewer  = build_research_reviewer(model, api_key)
+    verifier  = build_source_verifier(model, api_key)
     writer    = build_report_writer(model, api_key)
     
     logger.info("Axiom v4 Engine Ready — Logic: Deterministic | Truth: Hard-Verified | Mode: High-Performance")
-    return architect, scout, searcher, reviewer, writer
+    return architect, scout, searcher, reviewer, verifier, writer
 

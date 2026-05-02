@@ -44,3 +44,11 @@ class ResearchContext:
     async def get_all_findings(self) -> List[AxiomFinding]:
         with self._lock:
             return self.state.final_findings.copy()
+
+    async def add_usage(self, tokens: int, model: str):
+        with self._lock:
+            self.state.total_token_usage += tokens
+            self.state.model_usage[model] = self.state.model_usage.get(model, 0) + tokens
+            # Simple cost estimation (average $0.01 per 1k tokens for flash models)
+            self.state.total_cost += (tokens / 1000) * 0.01
+            logger.info(f"Usage Updated: {tokens} tokens via {model} | Total: {self.state.total_token_usage}")

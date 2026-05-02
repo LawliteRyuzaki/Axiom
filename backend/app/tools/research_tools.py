@@ -8,12 +8,18 @@ from app.memory.cache import AxiomCache
 import asyncio
 import json
 import hashlib
+from tenacity import retry, stop_after_attempt, wait_exponential
 from app.models.structured import AxiomFinding, FindingScores
 
 class AxiomDeepSearchTool(BaseTool):
     name: str = "axiom_deep_search"
     description: str = "Axiom v4 High-Performance Search. Concurrently queries hybrid sources and returns ranked, deduplicated results."
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        reraise=True
+    )
     async def _arun(self, query: str) -> str:
         logger.info(f"Tool: axiom_deep_search | Query: {query}")
         settings = get_settings()
@@ -46,6 +52,11 @@ class AxiomBatchVerifierTool(BaseTool):
     )
     context: Any = None
 
+    @retry(
+        stop=stop_after_attempt(2),
+        wait=wait_exponential(multiplier=1, min=2, max=6),
+        reraise=True
+    )
     async def _arun(self, targets_json: str) -> str:
         logger.info(f"Tool: axiom_batch_verifier | Batch size: {targets_json.count('url')}")
         try:
